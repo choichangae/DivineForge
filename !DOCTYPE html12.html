@@ -1,0 +1,3154 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>Divine Forge - Refined Edition (Patched)</title>
+    <style>
+        /* --- 기본 스타일 --- */
+        body { font-family: 'Noto Sans KR', sans-serif; padding: 20px; background-color: #1a1a1a; color: #eee; user-select: none; margin: 0; }
+        .container { max-width: 1400px; margin: 0 auto; padding: 20px; }
+        h1, h2 { text-align: center; color: #f1c40f; margin-bottom: 20px; text-shadow: 0 2px 4px rgba(0,0,0,0.8); }
+        
+        .main-layout { display: flex; gap: 25px; align-items: flex-start; position: relative; }
+        .left-panel { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 20px; }
+        .right-panel { width: 340px; flex-shrink: 0; position: sticky; top: 20px; z-index: 100; }
+        
+        .section { padding: 20px; border-radius: 8px; background: #2c2c2c; border: 1px solid #444; box-shadow: 0 4px 10px rgba(0,0,0,0.3); }
+        body.p1-turn .section { border-left: 5px solid #e74c3c; }
+        body.p2-turn .section { border-left: 5px solid #3498db; }
+        body.p3-turn .section { border-left: 5px solid #2ecc71; }
+        body.p4-turn .section { border-left: 5px solid #f1c40f; }
+
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; border-bottom: 2px solid #555; padding-bottom: 10px; }
+        
+        /* --- 맵 & 시계 --- */
+        .map-section { display: flex; flex-direction: column; align-items: center; padding: 20px; background: #222; border-radius: 15px; border: 2px solid #555; position: relative; }
+        .clock-container { position: relative; width: 280px; height: 280px; border-radius: 50%; background: #333; border: 8px solid #555; box-shadow: inset 0 0 30px rgba(0,0,0,0.8), 0 5px 15px rgba(0,0,0,0.5); display: flex; justify-content: center; align-items: center; margin-bottom: 20px; }
+        .clock-face { position: absolute; width: 85%; height: 85%; border-radius: 50%; border: 2px dashed #666; box-sizing: border-box; }
+        .clock-center-point { position: absolute; width: 12px; height: 12px; background: #aaa; border-radius: 50%; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 5; }
+        .map-tile { position: absolute; width: 28px; height: 28px; background: #444; border: 2px solid #777; border-radius: 50%; display: flex; justify-content: center; align-items: center; font-weight: bold; color: #aaa; font-size: 12px; transform: translate(-50%, -50%); z-index: 10; }
+        .map-tile.start-point { border-color: #f1c40f; color: #fff; background: #554400; box-shadow: 0 0 10px rgba(241, 196, 15, 0.5); }
+        
+        .player-piece { position: absolute; width: 32px; height: 32px; border-radius: 50%; border: 2px solid #fff; display: flex; justify-content: center; align-items: center; font-size: 12px; font-weight: bold; color: white; text-shadow: 0 1px 2px #000; z-index: 20; transition: all 0.5s cubic-bezier(0.34, 1.56, 0.64, 1); transform: translate(-50%, -50%); box-shadow: 0 4px 6px rgba(0,0,0,0.6); }
+        .player-piece.active-turn { width: 40px; height: 40px; font-size: 16px; border: 3px solid #fff; z-index: 100 !important; transform: translate(-50%, -50%) scale(1.1); box-shadow: 0 0 15px rgba(255, 255, 255, 0.8); }
+        .piece-p1 { background-color: #e74c3c; } .piece-p2 { background-color: #3498db; } .piece-p3 { background-color: #2ecc71; } .piece-p4 { background-color: #f1c40f; }
+
+        /* --- 카드 및 시장 --- */
+        .market-container { display: flex; align-items: center; gap: 15px; overflow-x: auto; padding-bottom: 10px; }
+        .deck-area { flex-shrink: 0; padding-right: 15px; border-right: 2px dashed #555; display: flex; flex-direction: column; align-items: center; gap: 5px; }
+        .card-list { display: flex; gap: 10px; flex-wrap: wrap; justify-content: flex-start; }
+        
+        .hand-area { min-height: 140px; background: #222; border: 2px dashed #555; border-radius: 10px; padding: 10px; display: flex; gap: 5px; overflow-x: auto; align-items: center; }
+        .hand-area.drag-over { background: #333; border-color: #f1c40f; }
+        
+        .reserved-area { min-height: 140px; background: #252222; border: 2px solid #5d4037; border-radius: 10px; padding: 10px; display: flex; gap: 5px; overflow-x: auto; align-items: center; }
+        
+        .artifacts-wrapper { display: flex; flex-direction: column; gap: 10px; max-height: 400px; overflow-y: auto; }
+        .player-artifact-row { display: flex; align-items: center; gap: 10px; background: #222; padding: 8px; border-radius: 8px; border-left: 5px solid #555; min-height: 140px; overflow-x: auto; }
+        .player-label { min-width: 60px; font-weight: bold; text-align: center; color: #aaa; display: flex; flex-direction: column; align-items: center; gap: 5px; font-size: 12px; }
+        .p1-row { border-color: #e74c3c; background: rgba(231, 76, 60, 0.05); } .p2-row { border-color: #3498db; background: rgba(52, 152, 219, 0.05); } .p3-row { border-color: #2ecc71; background: rgba(46, 204, 113, 0.05); } .p4-row { border-color: #f1c40f; background: rgba(241, 196, 15, 0.05); }
+        .artifact-list-container { display: flex; gap: 5px; flex: 1; overflow-x: auto; align-items: center; }
+
+        .empty-slot { width: 80px; height: 116px; border: 2px dashed #444; border-radius: 8px; display: flex; justify-content: center; align-items: center; color: #555; font-size: 11px; flex-shrink: 0; }
+        
+/* [수정] 카드 렌더링 최적화: will-change 추가 */
+        .card { 
+            width: 80px; height: 116px; border-radius: 6px; flex-shrink: 0; 
+            background-color: #111; background-size: cover; background-position: center; 
+            border: 2px solid #555; cursor: pointer; position: relative; 
+            transition: transform 0.2s, box-shadow 0.2s; 
+            will-change: transform; /* 핵심: GPU 가속 힌트 */
+        }
+        
+        /* [수정] 툴팁 렌더링 최적화: will-change 추가 */
+        #global-tooltip {
+            position: fixed;
+            background: rgba(0, 0, 0, 0.95);
+            color: #e040fb;
+            padding: 10px;
+            border-radius: 8px;
+            font-size: 12px;
+            white-space: pre-wrap;
+            z-index: 10000;
+            pointer-events: none;
+            border: 1px solid #9c27b0;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.8);
+            display: none;
+            min-width: 150px;
+            max-width: 250px;
+            text-align: center;
+            backdrop-filter: blur(4px);
+            will-change: left, top; /* 핵심: 위치 변경 최적화 */
+        }
+
+        .card.artifact { width: 100px; height: 160px; border: 2px solid #777; background-color: #1a1a1a; display:flex; flex-direction:column; }
+        
+        @keyframes medalShine {
+            0% { box-shadow: 0 0 5px rgba(255,255,255,0.5); transform: scale(1); filter: brightness(1); }
+            50% { box-shadow: 0 0 15px rgba(255, 215, 0, 0.9); transform: scale(1.15); filter: brightness(1.3); }
+            100% { box-shadow: 0 0 5px rgba(255,255,255,0.5); transform: scale(1); filter: brightness(1); }
+        }
+        .medal-icon { position: absolute; top: -8px; right: -8px; width: 30px; height: 30px; background-size: cover; border-radius: 50%; z-index: 20; box-shadow: 0 2px 5px rgba(0,0,0,0.5); background-color: #333; border: 2px solid #fff; display: flex; justify-content: center; align-items: center; font-size: 8px; color: #333; font-weight: bold; }
+        .medal-icon.shining { animation: medalShine 2s infinite ease-in-out; border-color: #ffd700; }
+        
+        .medal-Gold { background-image: url('images/medal_gold.png'); background-color: #ffd700; } 
+        .medal-Silver { background-image: url('images/medal_silver.png'); background-color: #c0c0c0; } 
+        .medal-Bronze { background-image: url('images/medal_bronze.png'); background-color: #cd7f32; }
+
+        .artifact-info { padding: 4px; width: 100%; height: 100%; box-sizing: border-box; display: flex; flex-direction: column; background: rgba(0,0,0,0.85); border-radius: 4px; }
+        .art-type { font-size: 9px; font-weight: bold; text-align: center; margin-bottom: 2px; padding: 2px; border-radius: 3px; color: #111; }
+        .art-name { font-size: 10px; font-weight: bold; text-align: center; color: #fff; margin-bottom: 2px; word-break: keep-all; line-height: 1.1; flex:1; display:flex; align-items:center; justify-content:center;}
+        .art-score { font-size: 11px; font-weight: bold; color: #f1c40f; text-align: center; border-bottom: 1px solid #555; padding-bottom: 2px; margin-bottom: 2px; }
+        .req-row { display: flex; justify-content: space-between; align-items: center; font-size: 9px; color: #ddd; border-bottom: 1px dashed #444; padding-bottom: 1px; }
+        .req-val { color: #fff; font-weight: bold; font-size: 10px; }
+        .reserved-badge { position: absolute; top: 0; left: 0; width: 100%; background: rgba(50, 50, 200, 0.8); color: white; font-size: 10px; text-align: center; padding: 2px 0; font-weight: bold; }
+
+        .card-scale-down { transform: scale(0.9); transform-origin: top left; margin-right: -10px; margin-bottom: -15px; }
+
+        .btn { padding: 5px 10px; background: #27ae60; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px; transition: 0.2s; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
+        .btn:hover { background: #2ecc71; transform: translateY(-1px); }
+        .btn:disabled { background: #333; color: #666; cursor: not-allowed; transform: none; box-shadow: none; }
+        .btn-next { background-color: #27ae60 !important; box-shadow: 0 0 10px rgba(39, 174, 96, 0.5); width: 100%; padding: 10px; font-size: 14px;}
+        .log { background: #000; color: #0f0; padding: 10px; height: 100px; overflow-y: auto; font-family: monospace; font-size: 12px; border: 1px solid #444; }
+        
+        .modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); display: none; justify-content: center; align-items: center; z-index: 2000; backdrop-filter: blur(5px); }
+        .modal-content { background: #333; padding: 20px; border-radius: 10px; text-align: center; border: 2px solid #f1c40f; box-shadow: 0 0 30px rgba(0,0,0,0.8); min-width: 600px; max-height: 90vh; overflow-y: auto; display: flex; flex-direction: column; gap: 15px; }
+        .modal-btn-group { display: flex; gap: 10px; justify-content: center; margin-top: 10px; }
+        .modal-btn { padding: 10px 20px; font-size: 16px; border-radius: 5px; border: none; cursor: pointer; font-weight: bold; color: white; }
+        .btn-craft { background: #27ae60; } .btn-reserve { background: #2980b9; } .btn-cancel { background: #c0392b; }
+
+        .turn-overlay { position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0); display: none; justify-content: center; align-items: center; flex-direction: column; z-index: 3000; animation: fadeIn 0.3s; pointer-events: none; }
+        .turn-title { font-size: 4em; font-weight: bold; margin-bottom: 20px; text-shadow: 0 0 20px #000; background: rgba(0,0,0,0.7); padding: 20px 40px; border-radius: 20px; border: 2px solid #fff; }
+        
+        .day-end-overlay { position: fixed; top:0; left:0; width:100%; height:100%; background: #000; display: none; justify-content: center; align-items: center; z-index: 4000; animation: fadeInOut 1.5s forwards; pointer-events: none; }
+        @keyframes fadeInOut { 0% { opacity: 0; } 20% { opacity: 1; } 80% { opacity: 1; } 100% { opacity: 0; } }
+        
+        .night-overlay { position: fixed; top:0; left:0; width:100%; height:100%; background: linear-gradient(180deg, #1a0033 0%, #000 100%); display: none; flex-direction: column; align-items: center; z-index: 2500; overflow-y: auto; padding: 20px; }
+        .night-dashboard { width: 90%; max-width: 1000px; background: #222; border: 1px solid #555; border-radius: 10px; padding: 15px; margin-bottom: 20px; display: flex; flex-direction: column; gap: 10px; }
+        .night-dash-row { display: flex; gap: 15px; align-items: center; }
+        .night-dash-label { width: 100px; font-weight: bold; color: #aaa; font-size: 14px; text-align: right; }
+        .night-dash-content { flex: 1; display: flex; gap: 5px; overflow-x: auto; padding: 5px; background: rgba(0,0,0,0.3); border-radius: 5px; min-height: 60px; align-items: center; }
+        
+        .loki-market { display: flex; gap: 20px; justify-content: center; margin-bottom: 30px; flex-wrap: wrap; }
+        .loki-slot { width: 160px; height: 240px; border: 2px dashed #9c27b0; border-radius: 12px; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; position: relative; background-size: cover; background-position: center; background-color: rgba(0,0,0,0.3); transition: transform 0.2s; cursor: pointer; }
+        .loki-slot:hover { transform: scale(1.05); border-color: white; z-index: 10; box-shadow: 0 0 20px #e040fb; }
+        .loki-slot.selected { border: 3px solid #00e676; box-shadow: 0 0 20px #00e676; transform: scale(1.05); }
+        .loki-slot.conflict { border: 3px solid #e74c3c; box-shadow: 0 0 20px #e74c3c; filter: grayscale(100%); opacity: 0.7; }
+        .loki-slot.conflict::after { content: "💥충돌"; position: absolute; top:50%; left:50%; transform:translate(-50%,-50%) rotate(-15deg); font-size: 2em; font-weight:bold; color:#e74c3c; border: 3px solid #e74c3c; padding: 5px; background: rgba(0,0,0,0.8); }
+        .loki-result-badge { position: absolute; top: 10px; right: 10px; background: rgba(0,0,0,0.8); color: #fff; padding: 5px; border-radius: 5px; font-size: 12px; font-weight: bold; }
+        .loki-slot-num { position: absolute; top: -15px; left: -15px; width: 40px; height: 40px; background: #e040fb; color: white; border-radius: 50%; display: flex; justify-content: center; align-items: center; font-weight: bold; font-size: 1.2em; box-shadow: 0 0 10px #e040fb; }
+
+        .card.market-selected { border-color: #00e676; box-shadow: 0 0 15px #00e676; transform: translateY(-10px); }
+        .card.swap-target { border: 3px solid #e040fb !important; box-shadow: 0 0 15px #e040fb; transform: scale(1.05); }
+        .card.swap-select { border: 3px solid #f39c12 !important; box-shadow: 0 0 15px #f39c12; transform: translateY(-10px); }
+        
+        .flying-card { position: fixed; z-index: 9999; transition: all 0.6s ease-in-out; pointer-events: none; box-shadow: 0 0 20px rgba(255, 255, 255, 0.8); border: 2px solid #fff; }
+        
+        .nord-panel { background: rgba(46, 204, 113, 0.2); padding: 10px; border-radius: 8px; margin-bottom: 10px; border: 1px solid #2ecc71; display: none; justify-content: space-between; align-items: center; }
+        
+        .crafting-container { display: flex; gap: 20px; align-items: flex-start; justify-content: center; }
+        .crafting-workspace { flex: 1; background: #222; padding: 15px; border-radius: 8px; border: 1px solid #555; }
+        .select-zone { min-height: 120px; border: 2px dashed #777; border-radius: 8px; padding: 10px; display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 10px; align-items: center; background: #2a2a2a; }
+        .select-zone-label { width: 100%; text-align: center; color: #777; font-size: 12px; margin-bottom: 5px; }
+        .my-hand-grid { display: flex; gap: 8px; flex-wrap: wrap; padding: 10px; background: #1a1a1a; border-radius: 8px; min-height: 100px; }
+        .card.selected { opacity: 0.3; filter: grayscale(100%); pointer-events: none; }
+        .card.in-slot { width: 60px; height: 87px; cursor: pointer; box-shadow: 0 0 10px gold; border-color: gold; }
+        
+        .craft-status { margin-top: 10px; padding: 10px; background: #333; border-radius: 5px; font-size: 13px; color: #ddd; text-align: left; }
+        .status-ok { color: #2ecc71; font-weight: bold; } .status-fail { color: #e74c3c; font-weight: bold; }
+        .olympus-discount { background: #003366; padding: 10px; border-radius: 5px; margin-bottom: 10px; text-align: left; border: 1px solid #00bfff; }
+        
+        .dev-fab { position: fixed; bottom: 20px; right: 20px; width: 60px; height: 60px; background: #c0392b; border-radius: 50%; display: flex; justify-content: center; align-items: center; font-size: 24px; cursor: pointer; z-index: 5000; border: 3px solid #fff; box-shadow: 0 5px 15px rgba(0,0,0,0.6); }
+        .dev-fab:hover { transform: scale(1.1); }
+        .dev-menu { position: fixed; bottom: 90px; right: 20px; background: #333; border: 2px solid #f1c40f; padding: 15px; border-radius: 10px; display: none; z-index: 4999; width: 200px; }
+        .dev-btn { display: block; width: 100%; margin-bottom: 8px; padding: 8px; background: #555; color: white; border: none; text-align: left; cursor: pointer; font-weight: bold; }
+        .dev-btn:hover { background: #777; }
+        .dev-active { background: #27ae60 !important; }
+        .dev-search-input { width: 100%; padding: 10px; margin-bottom: 10px; box-sizing: border-box; background: #444; border: 1px solid #777; color: white; }
+        
+        .btn-settings { position: fixed; bottom: 20px; right: 90px; width: 50px; height: 50px; border-radius: 50%; background: #333; border: 2px solid #777; font-size: 24px; cursor: pointer; z-index: 5000; display: flex; justify-content: center; align-items: center; box-shadow: 0 4px 10px rgba(0,0,0,0.5); transition: transform 0.2s; }
+        .btn-settings:hover { transform: rotate(45deg); border-color: #f1c40f; color: #f1c40f; }
+        .settings-modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 6000; display: none; justify-content: center; align-items: center; backdrop-filter: blur(3px); }
+        .settings-content { background: #2c2c2c; padding: 30px; border-radius: 12px; border: 2px solid #f1c40f; width: 300px; box-shadow: 0 0 20px rgba(241, 196, 15, 0.2); text-align: center; color: #eee; }
+        .volume-control { margin: 20px 0; display: flex; flex-direction: column; gap: 10px; }
+        .volume-label { display: flex; justify-content: space-between; font-size: 14px; font-weight: bold; color: #aaa; }
+        input[type=range] { -webkit-appearance: none; width: 100%; background: transparent; }
+        input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; height: 16px; width: 16px; border-radius: 50%; background: #f1c40f; cursor: pointer; margin-top: -6px; box-shadow: 0 0 5px rgba(0,0,0,0.5); }
+        input[type=range]::-webkit-slider-runnable-track { width: 100%; height: 4px; cursor: pointer; background: #555; border-radius: 2px; }
+        input[type=range]:focus { outline: none; }
+
+        /* [NEW] Game End Modal Styles */
+        .rank-row { display: flex; align-items: center; background: #222; padding: 10px; border-radius: 8px; margin-bottom: 10px; border: 1px solid #444; }
+        .rank-num { font-size: 24px; font-weight: bold; margin-right: 15px; width: 30px; }
+        .rank-p1 { color: #e74c3c; border-color: #e74c3c; }
+        .rank-p2 { color: #3498db; border-color: #3498db; }
+        .rank-p3 { color: #2ecc71; border-color: #2ecc71; }
+        .rank-p4 { color: #f1c40f; border-color: #f1c40f; }
+/* [수정 v10.1] 신화별 유물 테두리 색상 (맨 아래에 두어 최우선 적용) */
+        .card.type-egypt { border-color: #ffd700 !important; box-shadow: 0 0 10px rgba(255, 215, 0, 0.6); } 
+        .card.type-nord { border-color: #9b59b6 !important; box-shadow: 0 0 10px rgba(155, 89, 182, 0.6); } 
+        .card.type-olympus { border-color: #00bfff !important; box-shadow: 0 0 10px rgba(0, 191, 255, 0.6); } 
+        .card.type-celt { border-color: #2ecc71 !important; box-shadow: 0 0 10px rgba(46, 204, 113, 0.6); } 
+        .card.type-loki { border-color: #9c27b0 !important; width: 100px; height: 145px; box-shadow: 0 0 12px rgba(156, 39, 176, 0.5); }
+    </style>
+</head>
+<body>
+
+<div id="audioAssets" style="display:none;">
+    <audio id="bgmAudio" src="sounds/bgm.mp3" loop></audio> 
+    <audio id="sfxHover" src="sounds/card_hover.mp3"></audio>
+    <audio id="sfxSelect" src="sounds/card_select.mp3"></audio>
+    <audio id="sfxTurnStart" src="sounds/turn_start.mp3"></audio>
+</div>
+<div class="btn-settings" style="bottom: 80px; font-size: 20px;" onclick="document.getElementById('abilityModal').style.display='flex'">📖</div>
+
+<div id="abilityModal" class="modal" onclick="if(event.target===this)this.style.display='none'">
+    <div class="modal-content" style="max-width: 600px; text-align: left;">
+        <h2 style="color:#f1c40f; text-align:center; margin-bottom:20px;">📜 신화 능력 참조표</h2>
+        
+        <div style="margin-bottom: 15px; padding:10px; border:1px solid #2ecc71; background:rgba(46, 204, 113, 0.1); border-radius:8px;">
+            <h3 style="color:#2ecc71; margin:0 0 5px;">❄️ 노르드 (Nord)</h3>
+            <p style="font-size:13px; color:#ddd; margin:0;">
+                시장의 자원 카드들의 수치 합이 <b>특정 값 이하</b>일 때,<br>
+                행동 1회(3H)로 여러 장을 한 번에 가져옵니다.<br>
+                - 1단계: 합 <b>6</b> 이하 (최대 2장)<br>
+                - 2단계: 합 <b>9</b> 이하 (최대 2장)<br>
+                - 3단계: 합 <b>14</b> 이하 (최대 3장)
+            </p>
+        </div>
+
+        <div style="margin-bottom: 15px; padding:10px; border:1px solid #ffd700; background:rgba(255, 215, 0, 0.1); border-radius:8px;">
+            <h3 style="color:#ffd700; margin:0 0 5px;">👁️ 이집트 (Egypt)</h3>
+            <p style="font-size:13px; color:#ddd; margin:0;">
+                특정 행동의 <b>시간 비용(H)</b>을 줄여줍니다.<br>
+                - 1단계: 유물 보관 비용 -1H <br>
+                - 2단계: 보관, 자원 비용 -1H <br>
+                - 3단계:보관,자원,축복,제작 비용 -1H 
+            </p>
+        </div>
+
+        <div style="margin-bottom: 15px; padding:10px; border:1px solid #00bfff; background:rgba(0, 191, 255, 0.1); border-radius:8px;">
+            <h3 style="color:#00bfff; margin:0 0 5px;">☁️ 올림포스 (Olympus)</h3>
+            <p style="font-size:13px; color:#ddd; margin:0;">
+                유물 제작 시, <b>재료 1종류의 요구량</b>을 할인합니다.<br>
+                - 1단계: 재료 <b>2개</b> 할인<br>
+                - 2단계: 재료 <b>5개</b> 할인<br>
+                - 3단계: 재료 <b>12개</b> 할인
+            </p>
+        </div>
+
+        <div style="margin-bottom: 15px; padding:10px; border:1px solid #2ecc71; background:rgba(46, 204, 113, 0.1); border-radius:8px; border-color:#27ae60;">
+            <h3 style="color:#27ae60; margin:0 0 5px;">☘️ 켈트 (Celt)</h3>
+            <p style="font-size:13px; color:#ddd; margin:0;">
+                제작 시 부족한 재료를 <b>다른 자원 카드로 대체</b>합니다.<br>
+                - 1단계: 카드 <b>1장</b> 대체<br>
+                - 2단계: 카드 <b>2장</b> 대체 + 축복 조건을 다른 축복으로 대체 가능<br>
+                - 3단계: 카드 <b>3장</b> 대체 + <b>축복 조건 면제</b> + 타 신화 능력 모방 가능
+            </p>
+        </div>
+
+        <div class="modal-btn-group">
+            <button class="modal-btn btn-cancel" onclick="document.getElementById('abilityModal').style.display='none'">닫기</button>
+        </div>
+    </div>
+</div>
+<div class="btn-settings" onclick="audioManager.openSettings()">⚙️</div>
+
+<div id="settingsModal" class="settings-modal">
+    <div class="settings-content">
+        <h2 style="color:#f1c40f; margin-bottom:20px;">🔊 Audio Settings</h2>
+        <div class="volume-control">
+            <div class="volume-label"><span>BGM (배경음악)</span><span id="bgmVal">50%</span></div>
+            <input type="range" id="bgmSlider" min="0" max="1" step="0.01" value="0.5" oninput="audioManager.setBgmVolume(this.value)">
+        </div>
+        <div class="volume-control">
+            <div class="volume-label"><span>SFX (효과음)</span><span id="sfxVal">50%</span></div>
+            <input type="range" id="sfxSlider" min="0" max="1" step="0.01" value="0.5" oninput="audioManager.setSfxVolume(this.value)">
+        </div>
+        <button class="modal-btn btn-craft" style="width:100%; margin-top:20px;" onclick="audioManager.closeSettings()">닫기</button>
+    </div>
+</div>
+
+<div id="startModal" class="modal" style="display:flex; background:rgba(0,0,0,1);">
+    <div class="modal-content" style="max-width:500px; border-color:#9b59b6;">
+        <h1 style="color:#9b59b6; text-shadow:0 0 10px #9b59b6;">🌌 Constellation Mode</h1>
+        <p style="color:#ddd; margin-bottom:30px;">별자리 카드는 게임 전체에 영향을 미치는 특수 규칙입니다.<br>매 게임 무작위로 하나의 별자리가 선정됩니다.</p>
+        <div class="modal-btn-group" style="flex-direction:column; gap:15px;">
+            <button class="modal-btn" style="background:#555;" onclick="game.startGame(false)">기본 모드 시작</button>
+            <button class="modal-btn" style="background:linear-gradient(45deg, #8e44ad, #3498db); box-shadow:0 0 15px #8e44ad;" onclick="game.startGame(true)">✨ 별자리 모드 시작</button>
+<button class="modal-btn" style="background:#e74c3c; margin-top:10px; box-shadow:0 0 15px #c0392b;" onclick="game.startTestMode(13)">🐐 염소자리 테스트 모드</button>
+        </div>
+    </div>
+</div>
+
+<div id="futureDiaryModal" class="modal">
+    <div class="modal-content">
+        <h2>🔮 미래 일기</h2>
+        <p>유물 덱 위 3장을 확인했습니다. 1장을 선택하여 보관하세요.</p>
+        <div id="futureDiaryList" class="card-list" style="justify-content:center; margin:20px 0;"></div>
+        <div class="modal-btn-group">
+            <button class="modal-btn btn-cancel" onclick="document.getElementById('futureDiaryModal').style.display='none'">취소</button>
+        </div>
+    </div>
+</div>
+
+<div id="gameEndModal" class="modal">
+    <div class="modal-content" style="min-width: 500px;">
+        <h1>🏆 게임 종료 🏆</h1>
+        <div id="rankingContainer" style="text-align: left; padding: 20px;"></div>
+        <button class="modal-btn btn-next" onclick="location.reload()">다시 하기</button>
+    </div>
+</div>
+
+<div class="container" id="mainGame">
+    <h1>⚒️ Divine Forge <span id="titleDevMode" style="display:none; color:#e74c3c; font-size:0.5em;">(DEV)</span></h1>
+    <div class="main-layout">
+        <div class="left-panel">
+            <div class="section">
+                <div class="header">
+                    <span id="playerInfo" style="font-weight:bold; color:#e74c3c;">Player 1 Turn</span>
+                    <span id="scoreInfo" style="color:#f1c40f; font-weight:bold;">점수: 0</span>
+                    <span id="handInfo">Hand: 0/8</span>
+                </div>
+                <div id="constellationBanner" class="section" style="display:none; border-left: 5px solid #9b59b6; background: linear-gradient(90deg, #2c2c2c 0%, #1a0b2e 100%); margin-bottom:15px; padding:10px;">
+                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                        <div style="display:flex; align-items:center; gap:10px;">
+                            <div style="font-size:24px;">🌌</div>
+                            <div><div style="font-size:10px; color:#aaa;">ACTIVE CONSTELLATION</div><div id="constellationName" style="font-size:16px; font-weight:bold; color:#e040fb;">-</div></div>
+                        </div>
+                        <div id="constellationDesc" style="font-size:11px; color:#ddd; text-align:right; max-width:60%;">효과 설명</div>
+                    </div>
+                    <div id="taurusInfo" style="display:none; font-size:11px; color:#f1c40f; margin-top:5px; text-align:right;">*황소자리 효과: <span id="taurusTargetName"></span> 수치 +1</div>
+                </div>
+                <div style="display:flex; gap: 20px;">
+                    <div style="flex: 2;">
+                        <div style="display:flex; justify-content:space-between; align-items:center;">
+                            <h3 style="margin: 0 0 5px; font-size: 14px; color: #aaa;">🖐️ 보유 재료 (P1)</h3>
+                            <button id="btnToggleSwap" class="btn" style="display:none;">⇄ 순서 변경</button>
+                        </div>
+                        <div id="myHand" class="hand-area"></div>
+                    </div>
+                    <div style="flex: 1;">
+                        <h3 style="margin: 0 0 5px; font-size: 14px; color: #aaa;">📦 보관함 (P1)</h3>
+                        <div id="myReserved" class="reserved-area"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="section">
+                <div class="header">
+                    <span class="title" style="color:#d4af37;">⚔️ 유물 제작소 (제작 <span id="costArt">2</span>H / 보관 <span id="costReserve">1</span>H)</span>
+                    <span style="font-size:12px; color:#aaa;">*항상 7장 유지</span>
+                </div>
+                <div class="market-container">
+                    <div class="deck-area">
+                        <span class="deck-label">랜덤</span>
+                        <div id="deckArt" class="card deck" style="background-image: url('images/back_artifact.png');" onclick="game.reserveFromDeck()"></div>
+                        <div class="deck-info" style="font-size:10px;">클릭: 랜덤 보관(1H)</div>
+                    </div>
+                    <div id="marketArt" class="card-list" style="flex:1;"></div>
+                </div>
+            </div>
+            
+            <div class="section">
+                <div class="header">
+                    <span class="title" style="color:#e67e22;">⛏️ 자원 시장 (<span id="costRes">3</span>H)</span>
+                    <button id="btnSwapRes" class="btn" onclick="game.swap('resource')">🔄 교체 (1H)</button>
+                </div>
+                <div class="market-container">
+                    <div class="deck-area">
+                        <span class="deck-label">랜덤</span>
+                        <div id="deckRes" class="card deck" onclick="game.drawFromDeck('resource')"></div>
+                        <div class="deck-info"><span id="cntDeckRes">-</span>/<span id="cntDiscRes">-</span></div>
+                    </div>
+                    <div id="marketRes" class="card-list" style="flex-wrap: nowrap;"></div>
+                </div>
+                <div id="nordPanel" class="nord-panel" style="margin-top:10px;">
+                    <div style="font-weight:bold; color:#fff;">❄️ 노르드 능력 발동중</div>
+                    <div id="nordInfo" style="color:#eee; font-size:13px;">선택: 0장 (합: 0)</div>
+                    <div>
+                        <button class="btn" style="background:#27ae60;" onclick="game.confirmNord()">확인</button>
+                        <button class="btn" style="background:#c0392b;" onclick="game.cancelNord()">취소</button>
+                    </div>
+                </div>
+            </div>
+
+            <div id="celtPanel" style="display:none; background:rgba(46, 204, 113, 0.1); border:1px solid #2ecc71; padding:10px; margin-bottom: 20px; border-radius:8px;"></div>
+
+            <div class="section">
+                <div class="header">
+                    <span class="title" style="color:#2980b9;">✨ 축복 시장 (<span id="costBless">2</span>H)</span>
+                    <button id="btnSwapBless" class="btn" onclick="game.swap('blessing')">🔄 교체 (1H)</button>
+                </div>
+                <div class="market-container">
+                      <div class="deck-area">
+                        <span class="deck-label">랜덤</span>
+                        <div id="deckBless" class="card deck" onclick="game.drawFromDeck('blessing')"></div>
+                        <div class="deck-info"><span id="cntDeckBless">-</span>/<span id="cntDiscBless">-</span></div>
+                    </div>
+                    <div id="marketBless" class="card-list" style="flex-wrap: nowrap;"></div>
+                </div>
+            </div>
+            
+            <div class="section">
+                <h3 style="margin: 0 0 10px; font-size: 14px; color: #888;">🏆 플레이어별 제작 유물 현황</h3>
+                <div id="craftedList" class="artifacts-wrapper"></div>
+            </div>
+            <div id="gameLog" class="log"></div>
+        </div>
+        
+        <div class="right-panel">
+            <div class="map-section">
+                <span id="dayInfo" style="font-size:24px; font-weight:bold; color:#f1c40f; margin-bottom:15px;">Day 1</span>
+                <div class="clock-container" id="clockContainer">
+                    <div class="clock-face"></div>
+                    <div class="clock-center-point"></div>
+                    <div id="mapTiles"></div>
+                    <div id="pieceP1" class="player-piece piece-p1">P1</div>
+                    <div id="pieceP2" class="player-piece piece-p2">P2</div>
+                    <div id="pieceP3" class="player-piece piece-p3">P3</div>
+                    <div id="pieceP4" class="player-piece piece-p4">P4</div>
+                </div>
+                <div style="width:100%; text-align:center; color:#aaa; font-size:12px; margin-bottom:5px;">이전 날의 시간 초과분은<br>다음 날로 이월됩니다.</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div id="turnOverlay" class="turn-overlay"><div id="turnTitle" class="turn-title">Player 1 Turn</div></div>
+<div id="dayEndOverlay" class="day-end-overlay"><div style="font-size:4em; font-weight:bold; color:#f1c40f;">☀️ 낮 종료</div></div>
+
+<div id="craftModal" class="modal">
+    <div class="modal-content">
+        <h2>⚔️ 유물 제작</h2>
+        <div class="crafting-container">
+            <div class="crafting-target" id="craftTargetCard"></div>
+            <div class="crafting-workspace">
+                <div id="olympusOption" class="olympus-discount" style="display:none;">
+                    <div style="color:#00bfff; font-weight:bold; font-size:13px; margin-bottom:5px;">☁️ 올림포스 할인 (<span id="olympusVal">0</span>개 감소)</div>
+                    <div class="olympus-options" id="olympusRadios"></div>
+                </div>
+                <div class="select-zone-label">▼ 카드를 클릭하여 지불 슬롯에 추가하세요</div>
+                <div id="paymentSlot" class="select-zone"></div>
+                <div id="craftStatus" class="craft-status"></div>
+                <hr style="border-color:#444; margin:10px 0;">
+                <div style="font-size:12px; color:#aaa; text-align:left; margin-bottom:5px;">내 핸드:</div>
+                <div id="craftHandGrid" class="my-hand-grid"></div>
+            </div>
+        </div>
+        <div class="modal-btn-group">
+            <button class="modal-btn btn-craft" onclick="game.executeCraft()">🛠️ 제작 시도</button>
+            <button id="btnReserveInModal" class="modal-btn btn-reserve" onclick="game.confirmReserve()">📦 보관</button>
+            <button class="modal-btn btn-cancel" onclick="game.closeCraftModal()">취소</button>
+        </div>
+    </div>
+</div>
+<div id="celtConvertModal" class="modal">
+    <div class="modal-content">
+        <h2 style="color:#2ecc71;">☘️ 켈트 물질 변환</h2>
+        <p>변환할 대상을 선택하세요. (수치는 유지됩니다)</p>
+        <div id="celtTargetList" class="card-list" style="justify-content:center; margin:20px 0;"></div>
+        <div class="modal-btn-group">
+            <button class="modal-btn btn-cancel" onclick="game.closeCeltModal()">취소</button>
+        </div>
+    </div>
+</div>
+<div id="swapModal" class="modal">
+    <div class="modal-content" style="min-width: 800px;">
+        <h2>⚖️ 망각의 주판 (유물 교환)</h2>
+        <p style="color:#aaa; font-size:14px;">내 보관함의 유물 1개와 시장의 유물 1개를 선택하여 교환합니다.</p>
+        <div style="display:flex; gap:20px; justify-content:center; margin:20px 0;">
+            <div style="flex:1; border:1px solid #555; padding:10px; border-radius:8px; background:#222;">
+                <h3 style="color:#d4af37; border-bottom:1px solid #444; padding-bottom:5px;">📦 내 보관함</h3>
+                <div id="swapMyReserved" class="card-list" style="justify-content:center; min-height:120px;"></div>
+            </div>
+            <div style="display:flex; align-items:center;"><div style="font-size:30px;">⇄</div></div>
+            <div style="flex:1; border:1px solid #555; padding:10px; border-radius:8px; background:#222;">
+                <h3 style="color:#e67e22; border-bottom:1px solid #444; padding-bottom:5px;">🏛️ 시장 유물</h3>
+                <div id="swapMarket" class="card-list" style="justify-content:center; min-height:120px;"></div>
+            </div>
+        </div>
+        <div class="modal-btn-group">
+            <button id="btnExecuteSwap" class="modal-btn btn-craft" disabled onclick="game.executeSwap()">🔄 교환 실행</button>
+            <button class="modal-btn btn-cancel" onclick="game.closeSwapModal()">취소</button>
+        </div>
+    </div>
+</div>
+
+<div id="devArtifactModal" class="modal">
+    <div class="modal-content" style="min-width: 800px; max-height:80vh;">
+        <h2>🔍 유물 검색 및 강제 제작</h2>
+        <input type="text" id="devSearchInput" class="dev-search-input" placeholder="유물 이름 검색..." onkeyup="game.filterDevArtifacts()">
+        <div id="devArtifactList" class="card-list" style="justify-content:center; overflow-y:auto; flex:1;"></div>
+        <div class="modal-btn-group">
+            <button class="modal-btn btn-cancel" onclick="document.getElementById('devArtifactModal').style.display='none'">닫기</button>
+        </div>
+    </div>
+</div>
+
+<div id="nightScreen" class="night-overlay">
+    <div class="night-title">🌙 Loki's Secret Deal</div>
+    <div class="night-dashboard">
+        <div class="night-dash-row">
+            <div class="night-dash-label">내 재료</div>
+            <div id="nightHand" class="night-dash-content"></div>
+        </div>
+        <div class="night-dash-row">
+            <div class="night-dash-label">내 유물</div>
+            <div id="nightArtifacts" class="night-dash-content"></div>
+        </div>
+    </div>
+    <p style="color:#ccc; margin-bottom:10px;">원하는 카드를 선택하세요. (동시 공개 / 중복 시 획득 불가)</p>
+    <div class="loki-market" id="lokiMarket"></div>
+    <div style="margin-top:20px;">
+        <button id="btnRevealLoki" class="modal-btn btn-next" style="display:none;" onclick="game.revealLokiResults()">결과 공개</button>
+        <button id="btnEndNight" class="modal-btn btn-next" style="display:none;" onclick="game.finishNight()">다음 날로</button>
+    </div>
+    <div id="nightLog" style="margin-top:20px; color:#fff; font-weight:bold; min-height:100px; width:80%; border:1px solid #555; background:rgba(0,0,0,0.5); padding:10px; overflow-y:auto;"></div>
+</div>
+
+<div class="dev-fab" onclick="game.toggleDevMenu()">🛠️</div>
+<div id="devLokiModal" class="modal">
+    <div class="modal-content" style="min-width: 800px; max-height:80vh;">
+        <h2 style="color:#e040fb;">🃏 로키 카드 검색 및 획득</h2>
+        <input type="text" id="devLokiSearchInput" class="dev-search-input" placeholder="카드 이름 검색..." onkeyup="game.filterDevLoki()">
+        <div id="devLokiList" class="card-list" style="justify-content:center; overflow-y:auto; flex:1;"></div>
+        <div class="modal-btn-group">
+            <button class="modal-btn btn-cancel" onclick="document.getElementById('devLokiModal').style.display='none'">닫기</button>
+        </div>
+    </div>
+</div>
+<div id="devMenu" class="dev-menu">
+    <button class="dev-btn" id="btnDevToggle" onclick="game.toggleDevMode()">개발자 모드: OFF</button>
+    <button class="dev-btn" onclick="game.openDevArtifactSearch()">🔍 모든 유물 검색/제작</button>
+<button class="dev-btn" onclick="game.openDevLokiSearch()">🃏 로키 카드 검색/획득</button>
+    <button class="dev-btn" onclick="location.reload()">⚠️ 게임 리셋</button>
+</div>
+<div id="global-tooltip"></div>
+<script>
+class AudioManager {
+    constructor() {
+        this.bgm = document.getElementById('bgmAudio');
+        this.sfxHover = document.getElementById('sfxHover');
+        this.sfxSelect = document.getElementById('sfxSelect');
+        this.sfxTurnStart = document.getElementById('sfxTurnStart');
+        this.bgmVolume = 0.5; this.sfxVolume = 0.5;
+        this.bgm.volume = this.bgmVolume;
+        this.sfxHover.volume = this.sfxVolume;
+        this.sfxSelect.volume = this.sfxVolume;
+        this.sfxTurnStart.volume = this.sfxVolume;
+    }
+    playBgm() { this.bgm.play().catch(e => console.log("BGM Autoplay blocked")); }
+    pauseBgm() { this.bgm.pause(); }
+    playHover() {
+        if (this.sfxHover.paused) { this.sfxHover.currentTime = 0; this.sfxHover.play().catch(() => {}); }
+        else { this.sfxHover.currentTime = 0; this.sfxHover.play().catch(() => {}); }
+    }
+    playSelect() { this.sfxSelect.currentTime = 0; this.sfxSelect.play().catch(() => {}); }
+    playTurnStart() { this.sfxTurnStart.currentTime = 0; this.sfxTurnStart.play().catch(() => {}); }
+    setBgmVolume(val) { this.bgmVolume = val; this.bgm.volume = val; document.getElementById('bgmVal').innerText = Math.round(val * 100) + '%'; }
+    setSfxVolume(val) { 
+        this.sfxVolume = val; 
+        this.sfxHover.volume = val; 
+        this.sfxSelect.volume = val; 
+        this.sfxTurnStart.volume = val; 
+        document.getElementById('sfxVal').innerText = Math.round(val * 100) + '%'; 
+    }
+    openSettings() { document.getElementById('settingsModal').style.display = 'flex'; }
+    closeSettings() { document.getElementById('settingsModal').style.display = 'none'; }
+}
+const audioManager = new AudioManager();
+
+const CONFIG = { MAX_TIME: 12, MAX_DAYS: 5, HAND_LIMIT: 8, COST: { RES: 3, BLESS: 2, ART: 2, RESERVE: 1, SWAP: 1 } };
+const RES_NAMES = { adamantite: "아다만타이트", mithril: "미스릴", dragonBone: "용의 뼈", starFragment: "별의 파편" };
+const TYPE_NAMES = { nord: "노르드", egypt: "이집트", olympus: "올림포스", celt: "켈트" };
+
+const CONSTELLATION_DB = [
+    {id:1, name:"양자리", desc:"시작 시 자원 2장 보유", type:"start_res", val:2},
+    {id:2, name:"황소자리", desc:"시작 시 자원 1장 공개, 해당 자원 수치 +1", type:"passive_value_up"},
+    {id:3, name:"쌍둥이자리", desc:"시작 시 로키 카드 1장 보유", type:"start_loki", val:1},
+    {id:4, name:"게자리", desc:"시작 시 유물 1장 보관함에 보유", type:"start_reserve", val:1},
+    {id:5, name:"사자자리", desc:"시작 시 유물 5장 제거", type:"start_remove_art", val:5},
+    {id:6, name:"물고기자리", desc:"축복 시장 6장으로 확장", type:"market_expand_bless", val:6},
+    {id:7, name:"물병자리", desc:"시작 시 축복 2장 보유", type:"start_bless", val:2},
+    {id:8, name:"전갈자리", desc:"은총 제작 시 가장 낮은 재료 반환", type:"craft_refund"},
+    {id:9, name:"궁수자리", desc:"자원 시장 8장으로 확장", type:"market_expand_res", val:8},
+    {id:10, name:"천칭자리", desc:"시장 자원 중복 4장 시 전면 교체", type:"market_auto_reset"},
+    {id:11, name:"뱀주인자리", desc:"2~4일차 아침마다 보상(축복/자원/로키)", type:"daily_gift"},
+  {id:12, name:"처녀자리", desc:"낮 종료 시 오버타임(12H 초과) 없이 마친 플레이어 +2점", type:"day_end_score"},
+{id:13, name:"염소자리", desc:"게임 시작 시 무작위 유물 1개를 대여합니다. 이 유물은 3일차 밤 종료 시 회수됩니다.", type:"temporary_artifact"}
+];
+
+const LOKI_DB=[
+    {id:1,name:"구부러진 시곗바늘",desc:"사용 시 시간 -1H",type:"active_time"},
+    {id:2,name:"망각의 주판",desc:"보관 중인 유물 1장을 중앙의 유물 1장과 교환합니다.",type:"active_swap"},
+    {id:3,name:"불완전한 축복",desc:"노르드 / 켈트",type:"bless_split",tags:['nord','celt']},
+    {id:4,name:"불완전한 축복",desc:"노르드 / 이집트",type:"bless_split",tags:['nord','egypt']},
+    {id:5,name:"불완전한 축복",desc:"노르드 / 올림포스",type:"bless_split",tags:['nord','olympus']},
+    {id:6,name:"불완전한 축복",desc:"올림포스 / 이집트",type:"bless_split",tags:['olympus','egypt']},
+    {id:7,name:"불완전한 축복",desc:"이집트 / 켈트",type:"bless_split",tags:['egypt','celt']},
+    {id:8,name:"불완전한 축복",desc:"올림포스 / 켈트",type:"bless_split",tags:['olympus','celt']},
+    {id:9,name:"혼돈의 채석망치",desc:"자원 시장 무료 교체",type:"active_reset"},
+    {id:10,name:"부서진 회중시계",desc:"유물 무료 제작",type:"passive_free"},
+    {id:11,name:"계승자의 문장",desc:"즉시 은총 점수 +2",type:"instant_score"},
+    {id:12,name:"미래 일기",desc:"유물 카드 더미 맨 위 3장을 확인하고, 그중 1장을 보관합니다.",type:"active_peek"},
+    {id:13,name:"검은 주사위",desc:"자원 2장 버리고 2장 뽑기",type:"active_draw"},
+    {id:14,name:"불안정 융합석",desc:"별의 파편 4 / 용의 뼈 4",type:"res_split",mode:"OR",options:[{type:'starFragment',val:4},{type:'dragonBone',val:4}]},
+    {id:15,name:"불안정 융합석",desc:"별의 파편 4 / 미스릴 4",type:"res_split",mode:"OR",options:[{type:'starFragment',val:4},{type:'mithril',val:4}]},
+    {id:16,name:"불안정 융합석",desc:"별의 파편 4 / 아다만타이트 4",type:"res_split",mode:"OR",options:[{type:'starFragment',val:4},{type:'adamantite',val:4}]},
+    {id:17,name:"불안정 융합석",desc:"아다만타이트 4 / 용의 뼈 4",type:"res_split",mode:"OR",options:[{type:'adamantite',val:4},{type:'dragonBone',val:4}]},
+    {id:18,name:"불안정 융합석",desc:"아다만타이트 4 / 미스릴 4",type:"res_split",mode:"OR",options:[{type:'adamantite',val:4},{type:'mithril',val:4}]},
+    {id:19,name:"불안정 융합석",desc:"용의 뼈 4 / 미스릴 4",type:"res_split",mode:"OR",options:[{type:'dragonBone',val:4},{type:'mithril',val:4}]},
+    {id:20,name:"불안정 융합석",desc:"아다만타이트 2 + 용의 뼈 2",type:"res_split",mode:"AND",options:[{type:'adamantite',val:2},{type:'dragonBone',val:2}]},
+    {id:21,name:"불안정 융합석",desc:"아다만타이트 2 + 미스릴 2",type:"res_split",mode:"AND",options:[{type:'adamantite',val:2},{type:'mithril',val:2}]},
+    {id:22,name:"불안정 융합석",desc:"용의 뼈 2 + 미스릴 2",type:"res_split",mode:"AND",options:[{type:'dragonBone',val:2},{type:'mithril',val:2}]},
+    {id:23,name:"불안정 융합석",desc:"용의 뼈 2 + 별의 파편 2",type:"res_split",mode:"AND",options:[{type:'dragonBone',val:2},{type:'starFragment',val:2}]},
+    {id:24,name:"불안정 융합석",desc:"별의 파편 2 + 미스릴 2",type:"res_split",mode:"AND",options:[{type:'starFragment',val:2},{type:'mithril',val:2}]},
+    {id:25,name:"불안정 융합석",desc:"아다만타이트 2 + 별의 파편 2",type:"res_split",mode:"AND",options:[{type:'adamantite',val:2},{type:'starFragment',val:2}]},
+    {id:26,name:"파괴된 성배",desc:"축복 시장 무료 교체",type:"active_reset_bless"}
+];
+
+const ARTIFACT_DB = [
+    {name:"귀게스의 반지", type:"olympus", score:4, grade:"Bronze", cost:{adamantite:3, starFragment:3}},
+    {name:"헤르메스의 신발", type:"olympus", score:5, grade:"Bronze", cost:{dragonBone:3, mithril:4}},
+    {name:"크리셀라카토스", type:"olympus", score:6, grade:"Bronze", cost:{mithril:3, starFragment:5}},
+    {name:"퀴네에", type:"olympus", score:10, grade:"Silver", cost:{dragonBone:2, mithril:4, starFragment:5}},
+    {name:"케스토스 히마스", type:"olympus", score:12, grade:"Silver", cost:{adamantite:4, starFragment:9}},
+    {name:"트라아이나", type:"olympus", score:12, grade:"Silver", cost:{adamantite:2, dragonBone:7, mithril:3}},
+    {name:"아폴론의 리라", type:"olympus", score:14, grade:"Silver", cost:{adamantite:6, dragonBone:3, starFragment:6}},
+    {name:"아이기스", type:"olympus", score:14, grade:"Silver", cost:{adamantite:7, dragonBone:8}},
+    {name:"큐피드의 화살", type:"olympus", score:16, grade:"Silver", cost:{adamantite:5, dragonBone:3, mithril:7, starFragment:2}},
+    {name:"아다만트", type:"olympus", score:16, grade:"Silver", cost:{adamantite:12, dragonBone:2, starFragment:3}},
+    {name:"아스트라페", type:"olympus", score:24, grade:"Gold", cost:{adamantite:3, dragonBone:5, mithril:5, starFragment:12}},
+    {name:"마아트의 깃털", type:"egypt", score:4, grade:"Bronze", cost:{dragonBone:3, mithril:3}},
+    {name:"오시리스의 왕홀", type:"egypt", score:5, grade:"Bronze", cost:{adamantite:2, mithril:6}},
+    {name:"아누비스의 저울", type:"egypt", score:6, grade:"Bronze", cost:{adamantite:2, dragonBone:6}},
+    {name:"세트의 전쟁 도끼", type:"egypt", score:10, grade:"Silver", cost:{adamantite:6, dragonBone:2, mithril:2}},
+    {name:"세크메트의 역병", type:"egypt", score:12, grade:"Silver", cost:{adamantite:3, dragonBone:6, mithril:3}},
+    {name:"토트의 서", type:"egypt", score:12, grade:"Silver", cost:{dragonBone:2, mithril:6, starFragment:5}},
+    {name:"아펩의 이빨", type:"egypt", score:14, grade:"Silver", cost:{dragonBone:7, mithril:6, starFragment:2}},
+    {name:"호루스의 눈", type:"egypt", score:14, grade:"Silver", cost:{adamantite:4, mithril:6, starFragment:5}},
+    {name:"크눔의 물레", type:"egypt", score:16, grade:"Silver", cost:{adamantite:4, dragonBone:6, mithril:2, starFragment:5}},
+    {name:"만야르트", type:"egypt", score:16, grade:"Silver", cost:{dragonBone:5, mithril:4, starFragment:8}},
+    {name:"누의 항아리", type:"egypt", score:24, grade:"Gold", cost:{adamantite:3, dragonBone:14, mithril:2, starFragment:6}},
+    {name:"드라우프니르", type:"nord", score:4, grade:"Bronze", cost:{dragonBone:4, mithril:2}},
+    {name:"브리싱가멘", type:"nord", score:5, grade:"Bronze", cost:{mithril:3, starFragment:4}},
+    {name:"메긴요르드", type:"nord", score:6, grade:"Bronze", cost:{adamantite:9}},
+    {name:"그람", type:"nord", score:10, grade:"Silver", cost:{dragonBone:3, mithril:5, starFragment:3}},
+    {name:"스발린", type:"nord", score:12, grade:"Silver", cost:{adamantite:5, mithril:8}},
+    {name:"겔라르 호른", type:"nord", score:12, grade:"Silver", cost:{dragonBone:5, mithril:5, starFragment:3}},
+    {name:"다인슬레이프", type:"nord", score:14, grade:"Silver", cost:{adamantite:5, mithril:3, starFragment:7}},
+    {name:"궁니르", type:"nord", score:14, grade:"Silver", cost:{adamantite:6, dragonBone:2, starFragment:6}},
+    {name:"글레이프니르", type:"nord", score:16, grade:"Silver", cost:{adamantite:3, dragonBone:5, starFragment:8}},
+    {name:"묠니르", type:"nord", score:16, grade:"Silver", cost:{adamantite:6, mithril:7, starFragment:4}},
+    {name:"레바테인", type:"nord", score:24, grade:"Gold", cost:{adamantite:11, dragonBone:4, mithril:5, starFragment:6}},
+    {name:"오한", type:"celt", score:4, grade:"Bronze", cost:{adamantite:2, starFragment:4}},
+    {name:"누아다의 은팔", type:"celt", score:5, grade:"Bronze", cost:{dragonBone:4, starFragment:2}},
+    {name:"다그다의 솥", type:"celt", score:6, grade:"Bronze", cost:{dragonBone:4, starFragment:4}},
+    {name:"마나난의 황금 갑옷", type:"celt", score:10, grade:"Silver", cost:{adamantite:7, starFragment:4}},
+    {name:"칼라드볼그", type:"celt", score:12, grade:"Silver", cost:{adamantite:5, mithril:5, starFragment:2}},
+    {name:"페르디아의 뿔가죽", type:"celt", score:12, grade:"Silver", cost:{adamantite:5, dragonBone:6, mithril:2}},
+    {name:"게 볼그", type:"celt", score:14, grade:"Silver", cost:{adamantite:7, dragonBone:4, mithril:4}},
+    {name:"게 다러그", type:"celt", score:14, grade:"Silver", cost:{dragonBone:8, starFragment:7}},
+    {name:"프라가라흐", type:"celt", score:16, grade:"Silver", cost:{adamantite:4, dragonBone:4, mithril:8}},
+    {name:"게 비어", type:"celt", score:16, grade:"Silver", cost:{adamantite:4, dragonBone:6, mithril:4, starFragment:2}},
+    {name:"브류나크", type:"celt", score:24, grade:"Gold", cost:{dragonBone:5, mithril:17, starFragment:3}}
+];class Card {
+    constructor(cat, type, val = null, extra = null) {
+        this.cat = cat; // resource, blessing, artifact, loki
+        this.type = type; // specific type (e.g., 'nord', 'adamantite')
+        this.val = val; // value for resources
+        this.extra = extra; // loki card details or other metadata
+        this.id = Math.random().toString(36).substr(2,9); // Unique ID for Drag & Drop
+        this.used = false; // [NEW] Flag for preventing double counting in crafting
+    }
+    getImagePath() {
+        if (this.cat === 'resource') return `images/res_${this.type}_${this.val}.png`;
+        if (this.cat === 'blessing') return `images/bless_${this.type}.png`;
+        if (this.cat === 'loki') return `images/loki_${this.extra.id}.png`; 
+        return '';
+    }
+}
+
+class Deck {
+    constructor(cat) { this.cat = cat; this.cards = []; this.discardPile = []; this.init(); }
+    init() {
+        if (this.cat === 'resource') {
+            const types = Object.keys(RES_NAMES); const vals = [2,3,4,5,6,7];
+            types.forEach(t => vals.forEach(v => { for(let i=0; i<3; i++) this.cards.push(new Card('resource', t, v)); }));
+        } else if (this.cat === 'blessing') {
+            const types = Object.keys(TYPE_NAMES);
+            types.forEach(t => { for(let i=0; i<8; i++) this.cards.push(new Card('blessing', t)); });
+        } else if (this.cat === 'artifact') { 
+            ARTIFACT_DB.forEach(art => this.cards.push({...art})); // Clone object
+       } else if (this.cat === 'loki') {
+            // [수정] CSV v1.9 기준 정확한 수량 반영 (총 32장)
+            // ID 1(시계), 11(문장)은 4장씩, 나머지는 1장씩
+            const lokiCounts = [
+                {id:1, count:4}, {id:2, count:1}, {id:3, count:1}, {id:4, count:1},
+                {id:5, count:1}, {id:6, count:1}, {id:7, count:1}, {id:8, count:1},
+                {id:9, count:1}, {id:10, count:1}, {id:11, count:4}, {id:12, count:1},
+                {id:13, count:1}, {id:14, count:1}, {id:15, count:1}, {id:16, count:1},
+                {id:17, count:1}, {id:18, count:1}, {id:19, count:1}, {id:20, count:1},
+                {id:21, count:1}, {id:22, count:1}, {id:23, count:1}, {id:24, count:1},
+                {id:25, count:1}, {id:26, count:1}
+            ];
+
+            lokiCounts.forEach(def => {
+                const itemData = LOKI_DB.find(dbItem => dbItem.id === def.id);
+                if (itemData) {
+                    for(let i=0; i<def.count; i++) {
+                        this.cards.push(new Card('loki', 'loki', null, itemData));
+                    }
+                }
+            });
+        }
+        this.shuffle();
+    }
+    shuffle() { this.cards.sort(() => Math.random() - 0.5); }
+    draw() {
+        if (this.cards.length === 0) {
+            if (this.cat === 'loki' || this.discardPile.length === 0) return null;
+            // Recycle discard pile
+            this.cards = [...this.discardPile]; this.discardPile = []; this.shuffle();
+        }
+        return this.cards.pop();
+    }
+    peek(count) { // [NEW] For Future Diary
+        return this.cards.slice(-count).reverse(); 
+    }
+    discard(card) { 
+        // Reset card state before discarding
+        if(card.extra) card.used = false;
+        this.discardPile.push(card); 
+    }
+    getCount() { return this.cards.length; }
+    getDiscardCount() { return this.discardPile.length; }
+}
+
+class Player {
+    constructor(id) {
+        this.id = id; 
+        this.hand = []; 
+        this.reserved = []; 
+        this.artifacts = []; 
+        this.score = 0; 
+        this.time = 0; 
+        this.stackOrder = 0; 
+        this.isAI = (id !== 1); 
+        this.aiTargetIdx = null; 
+        this.nordMode = false; 
+        this.nordSelected = new Set();
+        this.olympusDiscount = { type: null, amount: 0 };
+        this.celtConvertCount = 0;
+    }
+    // [Updated] Hand count now includes Loki cards correctly for limit checks
+ // [수정] 로키 카드는 핸드 제한 개수에서 제외 (Bug Fix)
+    getHandCount() { 
+        return this.hand.filter(c => c.cat !== 'loki').length; 
+    }
+}
+
+class Game {
+    constructor() { 
+        this.isInitialized = false; 
+        this.dragSourceIdx = -1;
+    }
+    
+    startGame(enableConstellation) {
+        document.getElementById('startModal').style.display = 'none';
+        audioManager.playBgm(); 
+        this.init(enableConstellation);
+    }
+startTestMode(constellationId) {
+        document.getElementById('startModal').style.display = 'none';
+        audioManager.playBgm();
+        this.init(true, constellationId); // 특정 별자리 ID를 강제로 넘김
+    }
+
+  init(enableConstellation, fixedConstellationId = null) {
+        this.day = 1; 
+        this.isGameEnded = false; // [NEW] Game End Flag
+this.lastActivePlayer = null;
+        this.players = [ new Player(1), new Player(2), new Player(3), new Player(4) ];
+        
+        // Stack order initialization
+        this.players[3].stackOrder = 0; this.players[2].stackOrder = 1;
+        this.players[1].stackOrder = 2; this.players[0].stackOrder = 3;
+        
+        this.pIdx = 0; this.devMode = false;
+        
+        this.deckRes = new Deck('resource'); this.deckBless = new Deck('blessing');
+        this.deckArt = new Deck('artifact'); this.deckLoki = new Deck('loki');
+        
+        this.fieldRes = []; this.fieldBless = []; this.fieldArt = []; this.lokiOffers = [];
+        this.constellationMode = enableConstellation; this.activeConstellation = null; this.taurusBonusType = null;
+        
+ if (this.constellationMode) {
+            let cIdx;
+            if (fixedConstellationId) {
+                // 테스트 모드일 경우: 전달받은 ID로 고정
+                cIdx = CONSTELLATION_DB.findIndex(c => c.id === fixedConstellationId);
+            } else {
+                // 일반 모드일 경우: 랜덤 선택
+                cIdx = Math.floor(Math.random() * CONSTELLATION_DB.length);
+            }
+            this.activeConstellation = CONSTELLATION_DB[cIdx];
+            this.applyConstellationStartEffect();
+        }
+        this.fill('resource', this.getMarketSize('resource')); 
+        this.fill('blessing', this.getMarketSize('blessing')); 
+        this.fill('artifact', 7);
+        
+        this.selectedArtIdx = -1; this.isWorkingFromReserve = false; 
+        this.craftSelection = new Set(); this.nightSelections = {}; 
+        this.swapState = { handIdx: -1, reserveIdx: -1, marketIdx: -1 };
+        this.turnOverlayTimer = null;
+        this.futureDiaryState = { active: false, handIdx: -1 }; // [NEW] Future Diary State
+        
+        this.initMap(); this.render(); this.renderConstellationUI(); this.checkTurnStart();
+        this.initDragAndDrop();
+        this.isInitialized = true;
+    }
+
+    get cp() { return this.players[this.pIdx]; }
+
+    applyConstellationStartEffect() {
+        if (!this.activeConstellation) return;
+        const type = this.activeConstellation.type;
+        this.players.forEach(p => {
+            if (type === 'start_res') { for(let i=0; i<2; i++) { const c = this.deckRes.draw(); if(c) p.hand.push(c); } }
+            else if (type === 'start_loki') { const c = this.deckLoki.draw(); if(c) p.hand.push(c); }
+            else if (type === 'start_reserve') { const c = this.deckArt.draw(); if(c) p.reserved.push(c); }
+            else if (type === 'start_bless') { for(let i=0; i<2; i++) { const c = this.deckBless.draw(); if(c) p.hand.push(c); } }
+        });
+        
+        if (type === 'passive_value_up') { 
+            const guideCard = this.deckRes.draw();
+            if (guideCard) {
+                this.taurusBonusType = guideCard.type;
+                this.deckRes.discard(guideCard); this.deckRes.shuffle();
+                setTimeout(()=>alert(`[황소자리 발동]\n공개된 카드: ${RES_NAMES[this.taurusBonusType]}\n이번 게임 동안 해당 자원 수치 +1`), 500);
+            }
+        } else if (type === 'start_remove_art') { 
+            let removedNames = [];
+            for(let i=0; i<5; i++) { 
+                const c = this.deckArt.draw(); 
+                if(c) removedNames.push(c.name); 
+            }
+            setTimeout(() => alert(`[사자자리 발동]\n게임에서 제외된 유물 5장:\n- ${removedNames.join('\n- ')}`), 500);
+        }
+else if (type === 'temporary_artifact') {
+            this.players.forEach(p => {
+                const art = this.deckArt.draw();
+                if (art) {
+                    // 유물 속성 조작: 임시(Temp), 점수 0, 은총 없음
+                    art.isTemp = true; 
+                    art.isGrace = false; 
+                    art.finalScore = 0; 
+                    art.bonus = 0;
+                    
+                    // 인벤토리에 강제 주입
+                    p.artifacts.push(art);
+                }
+            });
+            setTimeout(() => alert(`[염소자리 발동]\n각 플레이어에게 유물이 1개씩 대여되었습니다.\n(능력은 발동하지만 점수는 없으며, 3일차 밤에 회수됩니다.)`), 500);
+        }
+    }
+
+    // --- Drag and Drop Logic ---
+    initDragAndDrop() {
+        const handContainer = document.getElementById('myHand');
+        
+        handContainer.addEventListener('dragover', (e) => {
+            e.preventDefault(); 
+            handContainer.classList.add('drag-over');
+            const afterElement = this.getDragAfterElement(handContainer, e.clientX);
+            const draggable = document.querySelector('.dragging');
+            if (afterElement == null) {
+                handContainer.appendChild(draggable);
+            } else {
+                handContainer.insertBefore(draggable, afterElement);
+            }
+        });
+
+        handContainer.addEventListener('dragleave', () => {
+            handContainer.classList.remove('drag-over');
+        });
+
+        handContainer.addEventListener('drop', (e) => {
+            e.preventDefault();
+            handContainer.classList.remove('drag-over');
+            this.updateHandOrder();
+        });
+    }
+
+    getDragAfterElement(container, x) {
+        const draggableElements = [...container.querySelectorAll('.card:not(.dragging)')];
+        
+        return draggableElements.reduce((closest, child) => {
+            const box = child.getBoundingClientRect();
+            const offset = x - box.left - box.width / 2;
+            if (offset < 0 && offset > closest.offset) {
+                return { offset: offset, element: child };
+            } else {
+                return closest;
+            }
+        }, { offset: Number.NEGATIVE_INFINITY }).element;
+    }
+
+    updateHandOrder() {
+        const handContainer = document.getElementById('myHand');
+        const newHand = [];
+        [...handContainer.children].forEach(child => {
+            const id = child.getAttribute('data-id');
+            const card = this.cp.hand.find(c => c.id === id);
+            if (card) newHand.push(card);
+        });
+        this.cp.hand = newHand;
+    }
+    // ---------------------------------
+
+    renderConstellationUI() {
+        const banner = document.getElementById('constellationBanner');
+        if (!this.constellationMode || !this.activeConstellation) { banner.style.display = 'none'; return; }
+        banner.style.display = 'block';
+        document.getElementById('constellationName').innerText = this.activeConstellation.name;
+        document.getElementById('constellationDesc').innerText = this.activeConstellation.desc;
+        if (this.activeConstellation.type === 'passive_value_up' && this.taurusBonusType) {
+            document.getElementById('taurusInfo').style.display = 'block';
+            document.getElementById('taurusTargetName').innerText = RES_NAMES[this.taurusBonusType];
+        } else { document.getElementById('taurusInfo').style.display = 'none'; }
+    }
+
+    getMarketSize(cat) {
+        let size = (cat === 'resource') ? 6 : (cat === 'blessing' ? 4 : 7);
+        if (this.constellationMode && this.activeConstellation) {
+            if (cat === 'resource' && this.activeConstellation.type === 'market_expand_res') size = 8;
+            if (cat === 'blessing' && this.activeConstellation.type === 'market_expand_bless') size = 6;
+        }
+        return size;
+    }
+
+    toggleDevMenu() { const menu = document.getElementById('devMenu'); menu.style.display = menu.style.display === 'block' ? 'none' : 'block'; }
+    
+    toggleDevMode() {
+        this.devMode = !this.devMode;
+        const btn = document.getElementById('btnDevToggle');
+        btn.innerText = this.devMode ? '개발자 모드: ON' : '개발자 모드: OFF';
+        if(this.devMode) btn.classList.add('dev-active'); else btn.classList.remove('dev-active');
+        document.getElementById('titleDevMode').style.display = this.devMode ? 'inline' : 'none';
+        this.render();
+    }
+    
+    openDevArtifactSearch() { document.getElementById('devArtifactModal').style.display = 'flex'; this.filterDevArtifacts(); }
+    
+    filterDevArtifacts() {
+        const query = document.getElementById('devSearchInput').value.toLowerCase();
+        const listEl = document.getElementById('devArtifactList'); listEl.innerHTML = '';
+        ARTIFACT_DB.forEach((art, i) => {
+            if(art.name.toLowerCase().includes(query)) {
+                const div = document.createElement('div');
+                div.className = `card artifact type-${art.type} card-scale-down`;
+                div.style.width = '100px'; div.style.height = '145px';
+                let reqHtml = ''; for(const [k,v] of Object.entries(art.cost)) reqHtml += `<div>${RES_NAMES[k]}: ${v}</div>`;
+                div.innerHTML = `<div class="artifact-info"><div class="art-name">${art.name}</div><div class="art-score" style="margin:5px 0;">★ ${art.score}</div><div style="font-size:10px; color:#aaa;">${reqHtml}</div></div>`;
+                div.onclick = () => { if(confirm(`${art.name} 획득?`)) this.devForceCraft(art); };
+                listEl.appendChild(div);
+            }
+        });
+    }
+    
+    devForceCraft(art) {
+        const craftedArt = { ...art, isGrace: false, finalScore: art.score, bonus: 0 };
+        this.players[0].artifacts.push(craftedArt); this.players[0].score += art.score;
+        alert(`[DEV] ${art.name} 획득 완료!`);
+        document.getElementById('devArtifactModal').style.display = 'none'; this.render();
+    }
+// [추가] 개발자 모드: 로키 카드 검색창 열기
+    openDevLokiSearch() { document.getElementById('devLokiModal').style.display = 'flex'; this.filterDevLoki(); }
+
+    // [추가] 개발자 모드: 로키 카드 필터링
+    filterDevLoki() {
+        const query = document.getElementById('devLokiSearchInput').value.toLowerCase();
+        const listEl = document.getElementById('devLokiList'); listEl.innerHTML = '';
+        
+        // 중복 없이 종류별로 하나씩만 표시
+        const seenIds = new Set();
+        
+        LOKI_DB.forEach((item) => {
+            if (seenIds.has(item.id)) return;
+            if (item.name.toLowerCase().includes(query) || item.desc.toLowerCase().includes(query)) {
+                seenIds.add(item.id);
+                
+                const c = new Card('loki', 'loki', null, item);
+                const div = document.createElement('div');
+                div.className = 'card type-loki';
+                div.style.backgroundImage = `url('${c.getImagePath()}')`;
+                div.style.width = '100px'; div.style.height = '145px';
+                div.setAttribute('data-tooltip', `${item.name}\n${item.desc}`);
+                
+                // 클릭 시 획득
+                div.onclick = () => { 
+                    if(confirm(`[DEV] ${item.name} 카드를 핸드에 추가합니까?`)) {
+                        this.players[0].hand.push(new Card('loki', 'loki', null, item));
+                        alert(`${item.name} 획득!`);
+                        this.render();
+                    }
+                };
+                listEl.appendChild(div);
+            }
+        });
+    }
+// [FIXED] 시간 소모(행동) 즉시 오버레이를 제거하여 클릭 방해 해결
+    consumeTime(amount) {
+        if (this.devMode) amount = 0; 
+        
+        // [핵심] 행동을 했으므로 오버레이를 강제로 끕니다. 
+        // 이것이 없으면 타이머가 꼬였을 때 영원히 화면을 가립니다.
+        const ol = document.getElementById('turnOverlay');
+        if(ol) ol.style.display = 'none';
+
+        const oldTime = this.cp.time; 
+        let targetTime = oldTime + amount;
+        
+        let maxStack = -1;
+        this.players.forEach(p => { if (p.id !== this.cp.id && p.time === targetTime) { if (p.stackOrder > maxStack) maxStack = p.stackOrder; } });
+        
+        this.cp.time = targetTime; 
+        this.cp.stackOrder = maxStack + 1;
+        
+        this.updateTimeUI(); 
+        this.determineNextTurn();
+    }
+    
+    passTurn() {
+        if (!this.canAct(0)) return; 
+        if(this.cp.time < CONFIG.MAX_TIME) { const cost = CONFIG.MAX_TIME - this.cp.time; this.consumeTime(cost); } 
+        else { alert("이미 하루를 마쳤습니다."); }
+    }
+    
+    determineNextTurn() {
+        if (this.players.every(p => p.time >= CONFIG.MAX_TIME)) { this.showDayEndEffect(); return; }
+        let candidates = this.players.filter(p => p.time < CONFIG.MAX_TIME);
+        if (candidates.length === 0) { this.showDayEndEffect(); return; }
+        
+        // Sort by Time ASC, then Stack Order DESC
+        candidates.sort((a, b) => { if (a.time !== b.time) return a.time - b.time; return b.stackOrder - a.stackOrder; });
+        
+        const nextPlayer = candidates[0];
+        // AI Hand Limit Check
+        if (nextPlayer.isAI && nextPlayer.getHandCount() > CONFIG.HAND_LIMIT) { 
+            while (nextPlayer.getHandCount() > CONFIG.HAND_LIMIT) { this.aiSmartDiscard(nextPlayer); } 
+        }
+        
+        if (nextPlayer.id !== this.cp.id) {
+            // Player Hand Limit Check
+            if (this.cp.id === 1 && this.cp.getHandCount() > CONFIG.HAND_LIMIT) { 
+                alert(`카드 1장을 버려야 턴을 넘길 수 있습니다.`); return; 
+            }
+            this.pIdx = this.players.indexOf(nextPlayer); 
+            this.checkTurnStart();
+        } else { 
+            this.render(); 
+            if (this.cp.isAI) { setTimeout(() => this.aiTurn(), 1000); } 
+        }
+    }
+    
+    aiSmartDiscard(aiPlayer) {
+        let worstIdx = -1; let minScore = 999;
+        aiPlayer.hand.forEach((c, i) => {
+            let score = 10; 
+            if (c.cat === 'resource') score = c.val; 
+            else if (c.cat === 'blessing') score = 5; 
+            else if (c.cat === 'loki') score = 20; 
+            if (score < minScore) { minScore = score; worstIdx = i; }
+        });
+        if (worstIdx !== -1) {
+            const c = aiPlayer.hand[worstIdx]; aiPlayer.hand.splice(worstIdx, 1);
+            if (c.cat === 'resource') this.deckRes.discard(c); else if (c.cat === 'blessing') this.deckBless.discard(c);
+            this.addLog(`[AI P${aiPlayer.id}] 핸드 초과로 정리 (${c.cat === 'resource' ? c.val : '카드'})`); 
+            this.render();
+        }
+    }
+    
+showDayEndEffect() {
+        const overlay = document.getElementById('dayEndOverlay'); 
+        overlay.style.display = 'flex';
+        
+        setTimeout(() => { 
+            overlay.style.display = 'none'; 
+            
+            // 1. 염소자리 효과: 4일차 낮 종료 시 즉시 게임 종료
+            if (this.constellationMode && this.activeConstellation.type === 'short_game' && this.day === 4) {
+                this.endGame();
+            } 
+            // 2. [추가된 로직] 정규 마지막 날(5일차) 종료 시 즉시 게임 종료
+            else if (this.day >= CONFIG.MAX_DAYS) {
+                this.endGame();
+            }
+            // 3. 그 외의 날(1~4일차)은 밤 단계로 진행
+            else {
+                this.startNightPhase(); 
+            }
+        }, 1200);
+    }
+    
+    checkTurnStart() {
+        if (!this.isInitialized) return;
+if (this.lastActivePlayer !== this.cp.id) {
+            this.cp.celtConvertCount = 0;
+        }
+        const ol = document.getElementById('turnOverlay'); const title = document.getElementById('turnTitle');
+        if (this.turnOverlayTimer) { clearTimeout(this.turnOverlayTimer); this.turnOverlayTimer = null; }
+        title.innerText = `Player ${this.cp.id} Turn`; title.className = `turn-title p${this.cp.id}-color`;
+        
+        if (this.cp.isAI) { 
+            ol.style.display = 'none'; document.body.className = `p${this.cp.id}-turn`; 
+            this.render(); setTimeout(() => this.aiTurn(), 1000); 
+        } 
+        else { 
+            audioManager.playTurnStart();
+            ol.style.display = 'flex'; document.body.className = `p${this.cp.id}-turn`; 
+            this.render(); this.turnOverlayTimer = setTimeout(() => { ol.style.display = 'none'; }, 1500); 
+        }
+    }
+
+animateAIAction(startEl, callback) {
+        // 1. 요소가 없으면 즉시 콜백 실행 (멈춤 방지)
+        if (!startEl) { 
+            console.warn("[Ani] 타겟 요소 없음, 즉시 종료");
+            if(callback) callback(); 
+            return; 
+        }
+
+        try {
+            const rect = startEl.getBoundingClientRect();
+            const clone = startEl.cloneNode(true);
+            clone.classList.add('flying-card');
+            
+            // 위치 보정
+            clone.style.width = rect.width + 'px'; 
+            clone.style.height = rect.height + 'px';
+            clone.style.left = rect.left + 'px'; 
+            clone.style.top = rect.top + 'px';
+            
+            document.body.appendChild(clone);
+            
+            const targetEl = document.getElementById(`pieceP${this.cp.id}`);
+            // 타겟이 없으면 화면 중앙으로
+            const targetRect = targetEl ? targetEl.getBoundingClientRect() : { left: window.innerWidth/2, top: window.innerHeight/2 };
+            
+            // 애니메이션 실행
+            setTimeout(() => { 
+                if(clone) {
+                    clone.style.left = targetRect.left + 'px'; 
+                    clone.style.top = targetRect.top + 'px'; 
+                    clone.style.opacity = '0'; 
+                    clone.style.transform = 'scale(0.2)'; 
+                }
+            }, 50);
+
+            // 종료 처리
+            setTimeout(() => { 
+                if(clone && clone.parentNode) clone.remove(); 
+                if(callback) callback(); 
+            }, 650);
+
+        } catch (e) {
+            console.error("[Ani Error] 애니메이션 중 오류:", e);
+            // 에러가 나도 콜백은 반드시 실행해서 게임이 멈추지 않게 함
+            if(callback) callback();
+        }
+    }
+    render() {
+        document.getElementById('dayInfo').innerText = `Day ${this.day}`;
+        document.getElementById('playerInfo').innerText = `Player ${this.cp.id} Turn`;
+        document.getElementById('playerInfo').className = `p${this.cp.id}-color`;
+        document.getElementById('scoreInfo').innerText = `점수: ${this.cp.score}`;
+        document.getElementById('handInfo').innerText = `Hand: ${this.cp.getHandCount()}`;
+        document.getElementById('costRes').innerText = this.getCost('RES');
+        document.getElementById('costBless').innerText = this.getCost('BLESS');
+        document.getElementById('costArt').innerText = this.getCost('ART');
+        document.getElementById('costReserve').innerText = this.getCost('RESERVE');
+        
+        // Crafted Artifacts UI
+        const craftedDiv = document.getElementById('craftedList'); craftedDiv.innerHTML = '';
+        this.players.forEach(p => {
+            const row = document.createElement('div'); row.className = `player-artifact-row p${p.id}-row`;
+            const label = document.createElement('div'); label.className = 'player-label';
+            label.innerHTML = `<div>Player ${p.id}</div><div style="font-size:10px; font-weight:normal;">(${p.score}점)</div>`;
+            row.appendChild(label);
+            
+            const listContainer = document.createElement('div'); listContainer.className = 'artifact-list-container';
+            if (p.artifacts.length === 0) { listContainer.innerHTML = '<span style="font-size:11px; color:#555;">유물 없음</span>'; } 
+            else {
+                p.artifacts.forEach(art => {
+                    const div = document.createElement('div'); 
+                    let classes = `card artifact type-${art.type} card-scale-down`;
+                    let medalHtml = ''; 
+                    
+                    if(art.isGrace) { 
+                        let mType = this.getMedalType(art.score - art.bonus); 
+                        medalHtml = `<div class="medal-icon medal-${mType} shining" title="은총 (+${art.bonus})"></div>`; 
+                    } else {
+                         let mType = this.getMedalType(art.score);
+                         medalHtml = `<div class="medal-icon medal-${mType}" style="box-shadow:none;"></div>`;
+                    }
+                    
+                    div.className = classes; 
+                    div.setAttribute('data-tooltip', `${art.name}\n★${art.finalScore}점`);
+                    div.innerHTML = `${medalHtml}<div class="artifact-info"><div class="art-type badge-${art.type}" style="font-size:8px; padding:1px;">${TYPE_NAMES[art.type]}</div><div class="art-name" style="font-size:9px; height:20px;">${art.name}</div></div>`;
+                    listContainer.appendChild(div);
+                });
+            }
+            row.appendChild(listContainer); craftedDiv.appendChild(row);
+        });
+
+        document.getElementById('deckRes').style.backgroundImage = "url('images/back_resource.png')";
+        document.getElementById('deckBless').style.backgroundImage = "url('images/back_blessing.png')";
+        document.getElementById('cntDeckRes').innerText = this.deckRes.getCount();
+        document.getElementById('cntDiscRes').innerText = this.deckRes.getDiscardCount();
+        document.getElementById('cntDeckBless').innerText = this.deckBless.getCount();
+        document.getElementById('cntDiscBless').innerText = this.deckBless.getDiscardCount();
+        
+        const renderList = (elId, list, type) => {
+            const el = document.getElementById(elId); el.innerHTML = '';
+            list.forEach((c, i) => {
+                const div = document.createElement('div');
+                div.onmouseenter = () => audioManager.playHover();
+                const disabled = (!this.devMode && this.cp.time >= CONFIG.MAX_TIME);
+                
+                if(type === 'artifact') {
+                    div.className = `card artifact type-${c.type}`; 
+                    let reqHtml = ''; for(const [k,v] of Object.entries(c.cost)) reqHtml += `<div class="req-row"><span>${RES_NAMES[k]}</span><span class="req-val">${v}</span></div>`;
+                    let mType = this.getMedalType(c.score); let medalHtml = `<div class="medal-icon medal-${mType}" style="top:-5px; right:-5px; width:25px; height:25px;"></div>`;
+                    div.innerHTML = `${medalHtml}<div class="artifact-info"><div class="art-type badge-${c.type}">${TYPE_NAMES[c.type]}</div><div class="art-name">${c.name}</div><div class="art-score">★ ${c.score}</div><div class="art-cost">${reqHtml}</div></div>`;
+                    
+                    if(disabled) div.classList.add('disabled'); 
+                    else div.onclick = () => { 
+                        audioManager.playSelect(); 
+                        this.openCraftModal(i, false); 
+                    };
+                } else {
+                    // [추가] 자원 카드 툴팁 설정
+                    if (type === 'res') {
+                        div.setAttribute('data-tooltip', `${RES_NAMES[c.type]} ${c.val}`);
+                    }div.className = `card type-${c.type}`; div.style.backgroundImage = `url('${c.getImagePath()}')`;
+                    if (this.cp.nordSelected && this.cp.nordSelected.has(i) && type === 'res') div.classList.add('market-selected'); 
+                    
+                    if(disabled) div.classList.add('disabled'); 
+                    else div.onclick = () => { 
+                        audioManager.playSelect(); 
+                        if(type==='res') this.clickResourceCard(i); else this.getCard('blessing', i); 
+                    };
+                }
+                el.appendChild(div);
+            });
+        };
+        
+        renderList('marketRes', this.fieldRes, 'res'); renderList('marketBless', this.fieldBless, 'bless'); renderList('marketArt', this.fieldArt, 'artifact');
+        
+         // [교체된 코드] 켈트 변환 버튼 + 핸드 카드 렌더링
+        const hDiv = document.getElementById('myHand'); hDiv.innerHTML = '';
+        
+        // 1. 켈트 변환 버튼 로직
+        const celtLv = this.getArtLevel('celt');
+        const swapLimit = celtLv >= 3 ? 3 : (celtLv >= 2 ? 2 : (celtLv >= 1 ? 1 : 0));
+        
+        let btnToggle = document.getElementById('btnToggleSwap');
+        
+        if (celtLv > 0 && !this.cp.isAI && this.cp.id === 1) {
+            btnToggle.style.display = 'inline-block';
+            if (this.isCeltConvertMode) {
+                btnToggle.innerText = `☘️ 변환 취소 (남은 횟수: ${swapLimit - this.cp.celtConvertCount})`;
+                btnToggle.style.background = '#e67e22';
+            } else {
+                btnToggle.innerText = `☘️ 켈트 변환 (${swapLimit - this.cp.celtConvertCount}회 남음)`;
+                btnToggle.style.background = '#27ae60';
+            }
+            btnToggle.onclick = () => this.toggleCeltMode();
+        } else {
+            btnToggle.style.display = 'none';
+        }
+
+        // 2. 카드 목록 생성 로직
+      this.players[0].hand.forEach((c, i) => { 
+            const div = document.createElement('div');
+            div.setAttribute('draggable', 'true');
+            div.setAttribute('data-id', c.id);
+            div.classList.add('card-draggable');
+            
+            div.addEventListener('dragstart', () => { div.classList.add('dragging'); });
+            div.addEventListener('dragend', () => { div.classList.remove('dragging'); });
+            
+            div.onmouseenter = () => audioManager.playHover();
+
+            if(c.cat==='loki') { 
+                div.className = 'card type-loki'; 
+                div.style.backgroundImage = `url('${c.getImagePath()}')`; 
+                div.setAttribute('data-tooltip', `${c.extra.name}\n${c.extra.desc}`);
+            }
+            else { 
+                div.className = `card type-${c.type}`; 
+                div.style.backgroundImage = `url('${c.getImagePath()}')`; 
+            }
+            
+            div.style.width = '60px'; div.style.height = '87px';
+            
+            // [클릭 이벤트 분기] 변환 모드면 모달 열기, 아니면 기존 동작
+            div.onclick = () => { 
+                audioManager.playSelect(); 
+                if (this.isCeltConvertMode) {
+                    this.openCeltConvertModal(i); 
+                } else {
+                    this.onHandCardClick(i); 
+                }
+            }; 
+            hDiv.appendChild(div);
+        });      const rDiv = document.getElementById('myReserved'); rDiv.innerHTML = '';
+        if(this.players[0].reserved.length === 0) rDiv.innerHTML = '<div class="empty-slot">빈 슬롯</div>';
+        else {
+            this.players[0].reserved.forEach((c, i) => {
+                const div = document.createElement('div');
+                div.onmouseenter = () => audioManager.playHover();
+                div.className = `card artifact type-${c.type}`; 
+                let reqHtml = ''; for(const [k,v] of Object.entries(c.cost)) reqHtml += `<div class="req-row"><span>${RES_NAMES[k]}</span><span class="req-val">${v}</span></div>`;
+                let mType = this.getMedalType(c.score); let medalHtml = `<div class="medal-icon medal-${mType}" style="top:-5px; right:-5px; width:25px; height:25px;"></div>`;
+                div.innerHTML = `${medalHtml}<div class="reserved-badge">보관됨</div><div class="artifact-info"><div class="art-type badge-${c.type}">${TYPE_NAMES[c.type]}</div><div class="art-name">${c.name}</div><div class="art-score">★ ${c.score}</div><div class="art-cost">${reqHtml}</div></div>`;
+                div.onclick = () => { 
+                    audioManager.playSelect(); 
+                    this.openCraftModal(i, true); 
+                }; 
+                rDiv.appendChild(div);
+            });
+        }
+        
+        // Nord Panel
+        const nordLv = this.getArtLevel('nord'); const nordPanel = document.getElementById('nordPanel');
+        if (nordLv > 0 && this.cp.nordMode && this.cp.id === 1) {
+            nordPanel.style.display = 'block'; const indices = Array.from(this.cp.nordSelected);
+            const sum = indices.reduce((a,b) => a + this.fieldRes[b].val, 0);
+            document.getElementById('nordInfo').innerText = `선택: ${indices.length}장 (합: ${sum})`;
+        } else { nordPanel.style.display = 'none'; }
+        
+        // Celt Panel
+        const celtLvReal = this.cp.artifacts.filter(a=>a.type==='celt').length; const celtPanel = document.getElementById('celtPanel'); 
+        if (celtPanel) {
+            if (celtLvReal >= 3 && this.cp.id === 1) { 
+                celtPanel.style.display = 'block'; let modeText = "① 자원3장 변환 + 축복면제";
+                if (this.cp.celtMimicMode) modeText = `② 능력 모방 중: ${TYPE_NAMES[this.cp.celtMimicMode]}`;
+                celtPanel.innerHTML = `<div style="font-size:12px; color:#2ecc71; font-weight:bold; margin-bottom:5px;">☘️ 켈트 3단계 선택</div><div style="font-size:11px; color:#ccc; margin-bottom:5px;">현재: ${modeText}</div><div style="display:flex; gap:5px;"><button class="btn" style="font-size:10px; padding:3px;" onclick="game.setCeltMode(null)">① 변환모드</button><button class="btn" style="font-size:10px; padding:3px; background:#9b59b6;" onclick="game.setCeltMode('nord')">② 노르드</button><button class="btn" style="font-size:10px; padding:3px; background:#ffd700; color:#333;" onclick="game.setCeltMode('egypt')">② 이집트</button><button class="btn" style="font-size:10px; padding:3px; background:#00bfff;" onclick="game.setCeltMode('olympus')">② 올림포스</button></div>`;
+            } else { celtPanel.style.display = 'none'; }
+        }
+        
+        document.getElementById('btnSwapRes').disabled = (this.cp.time >= CONFIG.MAX_TIME);
+        document.getElementById('btnSwapBless').disabled = (this.cp.time >= CONFIG.MAX_TIME);
+        this.updateTimeUI();
+    }
+    toggleCeltMode() {
+        this.isCeltConvertMode = !this.isCeltConvertMode;
+        this.render();
+    }
+
+    openCeltConvertModal(handIdx) {
+        const card = this.cp.hand[handIdx];
+        if (card.cat !== 'resource') {
+            alert("자원 카드만 변환할 수 있습니다.");
+            return;
+        }
+
+        const celtLv = this.getArtLevel('celt');
+        const limit = celtLv >= 3 ? 3 : (celtLv >= 2 ? 2 : 1);
+        if (this.cp.celtConvertCount >= limit) {
+            alert("이번 턴의 변환 횟수를 모두 사용했습니다.");
+            return;
+        }
+
+        this.celtTargetIdx = handIdx;
+        const listEl = document.getElementById('celtTargetList');
+        listEl.innerHTML = '';
+
+        const allTypes = ['adamantite', 'mithril', 'dragonBone', 'starFragment'];
+        const targetTypes = allTypes.filter(t => t !== card.type);
+
+        targetTypes.forEach(type => {
+            const div = document.createElement('div');
+            const dummyCard = new Card('resource', type, card.val); 
+            div.className = `card type-${type}`;
+            div.style.backgroundImage = `url('${dummyCard.getImagePath()}')`;
+            div.style.width = '80px'; div.style.height = '116px';
+            div.style.cursor = 'pointer';
+            div.innerHTML = `<div style="background:rgba(0,0,0,0.7); color:#fff; position:absolute; bottom:0; width:100%; text-align:center; font-size:12px;">${RES_NAMES[type]} ${card.val}</div>`;
+            div.onclick = () => this.executeCeltConvert(type);
+            listEl.appendChild(div);
+        });
+
+        document.getElementById('celtConvertModal').style.display = 'flex';
+    }
+
+    executeCeltConvert(newType) {
+        const idx = this.celtTargetIdx;
+        const oldCard = this.cp.hand[idx];
+        this.cp.hand[idx] = new Card('resource', newType, oldCard.val);
+        this.cp.celtConvertCount++;
+        this.addLog(`[켈트] ${RES_NAMES[oldCard.type]}(${oldCard.val}) → ${RES_NAMES[newType]}(${oldCard.val}) 변환 완료`);
+        this.closeCeltModal();
+        this.isCeltConvertMode = false; 
+        this.render();
+    }
+
+    closeCeltModal() {
+        document.getElementById('celtConvertModal').style.display = 'none';
+        this.celtTargetIdx = -1;
+    }
+// [추가] AI 전용 켈트 변환 판단 로직
+    aiTryCeltConvert(targetArt) {
+        const ai = this.cp;
+        const celtLv = this.getArtLevel('celt');
+        if (celtLv === 0) return false; 
+
+        const limit = celtLv >= 3 ? 3 : (celtLv >= 2 ? 2 : 1);
+        if (ai.celtConvertCount >= limit) return false; 
+
+        // 1. 부족한 자원 파악
+        let needed = {};
+        let surplus = []; 
+        
+        let myRes = { adamantite:0, mithril:0, dragonBone:0, starFragment:0 };
+        ai.hand.forEach((c, i) => {
+            if(c.cat === 'resource') {
+                myRes[c.type]++;
+                surplus.push({ idx: i, type: c.type, val: c.val });
+            }
+        });
+
+        for(const [type, req] of Object.entries(targetArt.cost)) {
+            let actualReq = req;
+            if (ai.olympusDiscount && ai.olympusDiscount.type === type) {
+                actualReq = Math.max(0, req - ai.olympusDiscount.amount);
+            }
+            
+            let currentVal = 0;
+            ai.hand.forEach(c => { if(c.cat==='resource' && c.type === type) currentVal += c.val; });
+            
+            if (currentVal < actualReq) {
+                needed[type] = actualReq - currentVal;
+            }
+        }
+
+        // 2. 변환 실행
+        const neededTypes = Object.keys(needed);
+        if (neededTypes.length === 0) return false;
+
+        let didConvert = false;
+
+        for (const targetType of neededTypes) {
+            if (ai.celtConvertCount >= limit) break;
+
+            const sacrificeIdx = surplus.findIndex(item => !neededTypes.includes(item.type));
+            
+            if (sacrificeIdx !== -1) {
+                const item = surplus[sacrificeIdx];
+                const handRealIdx = item.idx;
+                
+                const oldType = ai.hand[handRealIdx].type;
+                ai.hand[handRealIdx] = new Card('resource', targetType, item.val);
+                ai.celtConvertCount++;
+                
+                this.addLog(`[AI P${ai.id}] 켈트 변환: ${RES_NAMES[oldType]} -> ${RES_NAMES[targetType]}`);
+                
+                surplus.splice(sacrificeIdx, 1); 
+                didConvert = true;
+            }
+        }
+        
+        if (didConvert) this.render();
+        return didConvert;
+    }
+    // --- Action Methods ---
+    setCeltMode(mode) { this.cp.celtMimicMode = mode; this.render(); this.updateTimeUI(); }
+// ============================================================
+    //  [AI Core v9.0] Grand Master Edition (Bug Fixed)
+    //  수정사항: 성배 루프 해결, 핸드 제한 무시 기능 탑재
+    // ============================================================
+
+    aiTurn() {
+        const ai = this.cp;
+        // [안전장치] 이미 게임이 끝났거나 시간이 초과되었으면 정지
+        if (this.isGameEnded || ai.time >= CONFIG.MAX_TIME) return;
+
+        try {
+            // 1. [핸드 정리 우선] 턴 시작 시 핸드가 9장 이상이면 즉시 정리 (버그 방지)
+            if (ai.getHandCount() > CONFIG.HAND_LIMIT) {
+                this.aiSmartDiscard(ai, null);
+                // 정리 후 딜레이를 두고 재시작
+                setTimeout(() => this.aiTurn(), 500); 
+                return;
+            }
+
+            // 2. [전술] 로키 카드 사용 (무한루프 방지된 버전)
+            if (this.aiCheckStrategicLoki()) {
+                setTimeout(() => this.aiTurn(), 800);
+                return;
+            }
+
+            // 3. [전략] 목표 수립
+            const bestPlan = this.aiFindBestPlan();
+            if (!bestPlan) throw new Error("목표 설정 실패");
+            
+            ai.aiTargetIdx = bestPlan.targetIdx; 
+            const targetArt = bestPlan.art;
+this.aiTryCeltConvert(targetArt);
+
+            // 4. [실행] 행동 결정
+            if (bestPlan.action === 'SWAP_ARTIFACT') {
+                this.aiExecuteSwap(bestPlan.handIdx, bestPlan.reserveIdx, bestPlan.marketIdx);
+                return;
+            }
+
+            if (bestPlan.action === 'CRAFT') {
+                this.openCraftModal(bestPlan.targetIdx, bestPlan.fromReserve);
+                
+                if (bestPlan.discountType) {
+                    const olympusLv = this.getArtLevel('olympus');
+                    const amount = olympusLv >= 3 ? 12 : (olympusLv >= 2 ? 5 : 2);
+                    this.setOlympusDiscount(bestPlan.discountType, amount);
+                }
+                
+                this.aiAutoSelectMaterials(targetArt, bestPlan.discountType);
+                
+                // 유효성 검사
+                const statusCheck = this.validateCraft(targetArt, document.createElement('div'));
+                if (!statusCheck.valid) {
+                    this.closeCraftModal();
+                    // 계산보다 실제 재료가 부족하면 자원 확보로 선회
+                    this.aiActionGather(bestPlan); 
+                } else {
+                    this.executeCraft();
+                }
+                return;
+            }
+
+            if (bestPlan.action === 'RESERVE') {
+                if (ai.reserved.length >= 1) {
+                    this.aiActionGather(bestPlan);
+                } else {
+                    this.openCraftModal(bestPlan.targetIdx, false);
+                    this.confirmReserve();
+                }
+                return;
+            }
+
+            // 자원 확보
+            this.aiActionGather(bestPlan);
+
+        } catch (e) {
+            console.warn(`[AI Error P${ai.id}] ${e.message}`);
+            console.error(e); // 상세 에러를 콘솔에 출력
+            
+            // 비상 조치 실행
+            this.aiEmergencyAction();
+            
+            // [중요] 비상 조치 후에도 시간이 그대로라면 강제로 1시간을 흐르게 함 (무한 루프 방지)
+            // 약간의 딜레이를 주어 비상 조치 내의 드로우 로직과 겹치지 않게 함
+            setTimeout(() => {
+                if (this.cp.id === ai.id && this.cp.time === ai.time) {
+                    this.addLog(`[System] AI P${ai.id} 오류 복구: 강제 턴 넘김`);
+                    this.consumeTime(1);
+                }
+            }, 1000);
+        }
+    }
+
+    // [전술] 로키 전술 (성배 루프 해결됨)
+    aiCheckStrategicLoki() {
+        const ai = this.cp;
+
+        // 1. 계승자의 문장
+        const crestIdx = ai.hand.findIndex(c => c.cat === 'loki' && c.extra.type === 'instant_score');
+        if (crestIdx !== -1) {
+            this.addLog(`[AI] '계승자의 문장' 발동 (+2점)`);
+            this._aiForceUseLoki(crestIdx); // 강제 사용 함수 호출
+            return true;
+        }
+
+        // 2. 시곗바늘
+        const clockIdx = ai.hand.findIndex(c => c.cat === 'loki' && c.extra.type === 'active_time');
+        if (clockIdx !== -1) {
+            if (ai.time >= 9 || (ai.score < 10 && ai.time >= 7)) {
+                this.addLog(`[AI] 시간을 되돌립니다 (-1H)`);
+                this._aiForceUseLoki(clockIdx);
+                return true;
+            }
+        }
+
+        // 3. 검은 주사위
+        const diceIdx = ai.hand.findIndex(c => c.cat === 'loki' && c.extra.type === 'active_draw');
+        if (diceIdx !== -1) {
+            const junkCount = ai.hand.filter(c => c.cat === 'resource' && c.val <= 3).length;
+            if (junkCount >= 3) {
+                this.addLog(`[AI] 패가 말려 '검은 주사위' 사용`);
+                this._aiForceUseLoki(diceIdx);
+                return true;
+            }
+        }
+
+        // 4. 미래 일기
+        const diaryIdx = ai.hand.findIndex(c => c.cat === 'loki' && c.extra.type === 'active_peek');
+        if (diaryIdx !== -1 && ai.reserved.length === 0) {
+            const hasGoodMarket = this.fieldArt.some(art => art.score >= 14);
+            if (!hasGoodMarket) {
+                this.addLog(`[AI] '미래 일기'로 유물 탐색`);
+                // 로키 카드 제거
+                ai.hand.splice(diaryIdx, 1);
+                // 로직 수행
+                const cards = this.deckArt.peek(3);
+                cards.sort((a,b) => b.score - a.score);
+                if (cards.length > 0) {
+                    ai.reserved.push(cards[0]);
+                    this.deckArt.shuffle();
+                    this.addLog(`[AI] 미래 일기 결과: [${cards[0].name}] 획득`);
+                }
+                this.render();
+                return true;
+            }
+        }
+        
+        // 5. 혼돈의 채석망치
+        const hammerIdx = ai.hand.findIndex(c => c.cat === 'loki' && c.extra.type === 'active_reset');
+        if (hammerIdx !== -1) {
+             let maxVal = 0;
+             this.fieldRes.forEach(c => { if(c.val > maxVal) maxVal = c.val; });
+             if (maxVal <= 4) {
+                 this.addLog(`[AI] 시장 품질이 낮아 '혼돈의 채석망치' 사용`);
+                 this._aiForceUseLoki(hammerIdx);
+                 return true;
+             }
+        }
+
+        return false;
+    }
+
+    // [New] AI 전용 로키 사용 함수 (기존 함수가 AI를 차단하므로 별도 구현)
+    _aiForceUseLoki(idx) {
+        const ai = this.cp;
+        const card = ai.hand[idx];
+        if (!card) return;
+
+        const type = card.extra.type;
+        
+        // 효과 적용
+        if (type === "instant_score") ai.score += 2;
+        else if (type === "active_time") ai.time = Math.max(0, ai.time - 1);
+        else if (type === "active_reset") {
+            this.fieldRes.forEach(c => this.deckRes.discard(c)); 
+            this.fieldRes.length = 0;
+            this.fill('resource', this.getMarketSize('resource'));
+        }
+        else if (type === "active_reset_bless") {
+            this.fieldBless.forEach(c => this.deckBless.discard(c)); 
+            this.fieldBless.length = 0;
+            this.fill('blessing', this.getMarketSize('blessing'));
+        }
+        else if (type === "active_draw") {
+            // 자원 2개 버리고 2개 뽑기 (단순화)
+            let removed = 0;
+            for(let i=ai.hand.length-1; i>=0; i--) {
+                if(ai.hand[i].cat === 'resource' && removed < 2) {
+                    this.deckRes.discard(ai.hand[i]);
+                    ai.hand.splice(i, 1);
+                    removed++;
+                }
+            }
+            this.drawFromDeck('resource');
+            this.drawFromDeck('resource');
+        }
+
+        // 카드 제거 (핵심: 여기서 확실히 지워야 루프가 안 돔)
+        // 주의: active_draw 등에서 인덱스가 밀릴 수 있으므로 객체 비교로 지움
+        const realIdx = ai.hand.indexOf(card);
+        if (realIdx !== -1) ai.hand.splice(realIdx, 1);
+        
+        this.render();
+    }
+
+    // [전략] 목표 수립
+    aiFindBestPlan() {
+        const ai = this.cp;
+        let bestScore = -9999;
+        let bestPlan = null;
+
+        // 망각의 주판 각
+        const abacusIdx = ai.hand.findIndex(c => c.cat === 'loki' && c.extra.type === 'active_swap');
+        if (abacusIdx !== -1 && ai.reserved.length > 0 && this.fieldArt.length > 0) {
+            let worstRes = { score: 999, idx: -1 };
+            ai.reserved.forEach((art, i) => { if(art.score < worstRes.score) worstRes = {score: art.score, idx: i}; });
+            let bestMkt = { score: -1, idx: -1 };
+            this.fieldArt.forEach((art, i) => { if(art.score > bestMkt.score) bestMkt = {score: art.score, idx: i}; });
+            
+            if (bestMkt.score - worstRes.score >= 6) {
+                return { action: 'SWAP_ARTIFACT', handIdx: abacusIdx, reserveIdx: worstRes.idx, marketIdx: bestMkt.idx };
+            }
+        }
+
+        // 보관함 평가
+        ai.reserved.forEach((art, idx) => {
+            const analysis = this.aiCalculateTargetValue(art, true);
+            analysis.targetIdx = idx;
+            if (analysis.netValue > bestScore) { bestScore = analysis.netValue; bestPlan = analysis; }
+        });
+
+        // 시장 평가
+        this.fieldArt.forEach((art, idx) => {
+            const analysis = this.aiCalculateTargetValue(art, false);
+            analysis.targetIdx = idx;
+            if (analysis.netValue > bestScore) { bestScore = analysis.netValue; bestPlan = analysis; }
+        });
+
+        return bestPlan;
+    }
+
+// ============================================================
+    //  [AI Brain v9.2] 제작 판단 및 재료 선택 (Simulation & Auto-Select)
+    // ============================================================
+
+// [UPGRADED] 켈트/올림포스/노르드 능력을 완벽하게 계산하는 AI 두뇌
+    aiCalculateTargetValue(art, isReserved) {
+        const ai = this.cp;
+        
+        // 1. 기본 자원 파악 (보유량)
+        let myRes = { adamantite:0, mithril:0, dragonBone:0, starFragment:0 };
+        
+        ai.hand.forEach(c => {
+            if (c.cat === 'resource') {
+                let val = c.val;
+                // 황소자리 보너스
+                if(this.constellationMode && this.activeConstellation.type === 'passive_value_up' && c.type === this.taurusBonusType) val += 1;
+                myRes[c.type] += val;
+            }
+            else if (c.cat === 'loki' && c.extra.type === 'res_split') {
+                // 로키 자원 (계산 편의상 첫 번째 옵션으로 가정)
+                if (c.extra.mode === 'AND') c.extra.options.forEach(opt => myRes[opt.type] += opt.val);
+                else myRes[c.extra.options[0].type] += c.extra.options[0].val;
+            }
+        });
+
+        // 2. 올림포스 할인 시뮬레이션 (가장 이득이 되는 자원을 스스로 찾음)
+        const olympusLv = this.getArtLevel('olympus');
+        let bestDiscountType = null;
+        let discountAmt = 0;
+        
+        if (olympusLv > 0) {
+            discountAmt = olympusLv >= 3 ? 12 : (olympusLv >= 2 ? 5 : 2);
+            let maxSaved = -1;
+            // 어떤 자원을 할인받아야 가장 많이 깎이는지 계산
+            for (const [type, req] of Object.entries(art.cost)) {
+                if (req > 0) {
+                    const saved = Math.min(req, discountAmt);
+                    if (saved > maxSaved) {
+                        maxSaved = saved;
+                        bestDiscountType = type;
+                    }
+                }
+            }
+        }
+
+        // 3. 켈트 변환 잠재력 계산 (남은 변환 횟수)
+        const celtLv = this.getArtLevel('celt');
+        const maxSwaps = celtLv >= 3 ? 3 : (celtLv >= 2 ? 2 : (celtLv >= 1 ? 1 : 0));
+        let remainingSwaps = Math.max(0, maxSwaps - ai.celtConvertCount);
+
+        // 4. 부족분 계산 (변환 가능성 포함)
+        let missingTotalVal = 0;
+        let needsSwap = false;
+        
+        for (const [type, req] of Object.entries(art.cost)) {
+            let actualReq = req;
+            // 위에서 계산한 최적의 할인을 적용
+            if (bestDiscountType === type) actualReq = Math.max(0, req - discountAmt);
+
+            let currentVal = myRes[type] || 0;
+            let needed = actualReq - currentVal;
+
+            if (needed > 0) {
+                // 부족한데 변환 횟수가 남았다면? -> "변환해서 메꿀 수 있다"고 판단
+                if (remainingSwaps > 0) {
+                    // 카드 1장당 평균 가치 4로 가정하여 커버 가능한지 계산
+                    const potentialFill = remainingSwaps * 4; 
+                    
+                    if (needed <= potentialFill) {
+                        // 변환으로 해결 가능! -> 부족분 0 처리, 횟수 차감 시뮬레이션
+                        const swapsNeeded = Math.ceil(needed / 4);
+                        remainingSwaps -= swapsNeeded;
+                        needed = 0; 
+                        needsSwap = true;
+                    } else {
+                        // 변환해도 부족함 -> 최대한 메꾸고 남은 부족분 계산
+                        needed -= potentialFill;
+                        remainingSwaps = 0;
+                        missingTotalVal += needed;
+                    }
+                } else {
+                    missingTotalVal += needed;
+                }
+            }
+        }
+
+        // 5. 가치 산정
+        let action = 'GATHER';
+        let completionBonus = 0;
+        
+        // 부족분이 0이면 (변환 포함해서) 제작 가능!
+        if (missingTotalVal <= 0) {
+            action = 'CRAFT';
+            completionBonus = 500; // 제작 1순위
+            if (needsSwap) completionBonus += 50; // 변환 능력 적극 활용 장려
+        } else {
+            // 완성이 가까울수록 점수 (최대 100점)
+            completionBonus = Math.max(0, 100 - (missingTotalVal * 5));
+        }
+
+        // 6. 비용 및 턴 계산 (노르드 속도 반영)
+        const nordLv = this.getArtLevel('nord');
+        // 기본: 3.5 / 노르드1~2: 7.0 / 노르드3: 10.5 (턴당 자원 획득 기대값)
+        let gatherSpeed = 3.5;
+        if (nordLv >= 3) gatherSpeed = 10.5;
+        else if (nordLv >= 1) gatherSpeed = 7.0;
+
+        const gatherTurns = Math.ceil(missingTotalVal / gatherSpeed); 
+        let totalTurnCost = gatherTurns * 5; 
+
+        let netValue = (art.score * 0.5) + completionBonus - totalTurnCost;
+
+        // 축복 체크 (단순화)
+        const hasBless = ai.hand.some(c => 
+            (c.cat === 'blessing' && c.type === art.type) || 
+            (c.cat === 'loki' && c.extra.type === 'bless_split' && c.extra.tags.includes(art.type))
+        );
+        
+        // 켈트 3렙(축복 면제)이 아니면 축복 없이는 감점
+        if (celtLv < 3 && !hasBless) {
+            netValue -= 200; 
+        }
+
+        return { 
+            art, 
+            netValue, 
+            action, 
+            fromReserve: isReserved, 
+            discountType: bestDiscountType, // AI가 스스로 계산한 최적 할인 타입 반환
+            needBless: (!hasBless && celtLv < 3), 
+            missingVal: missingTotalVal 
+        };
+    }
+
+    // [손] 제작 재료 자동 선택 (이 함수가 있어야 AI가 카드를 선택함)
+    aiAutoSelectMaterials(art, discountType) {
+        this.craftSelection.clear();
+        const ai = this.cp;
+        
+        // 1. 일단 모든 자원과 관련 로키 카드를 선택 (과잉 선택해도 validateCraft에서 알아서 처리됨)
+        ai.hand.forEach((c, i) => {
+            // 자원
+            if (c.cat === 'resource') {
+                this.craftSelection.add(i);
+            }
+            // 로키: 재료형(융합석)
+            else if (c.cat === 'loki' && c.extra.type === 'res_split') {
+                this.craftSelection.add(i);
+            }
+            // 로키: 무료 제작(회중시계)
+            else if (c.cat === 'loki' && c.extra.type === 'passive_free') {
+                this.craftSelection.add(i);
+            }
+            // 축복: 일치하는 축복
+            else if (c.cat === 'blessing' && c.type === art.type) {
+                this.craftSelection.add(i);
+            }
+            // 로키: 대체 축복
+            else if (c.cat === 'loki' && c.extra.type === 'bless_split' && c.extra.tags.includes(art.type)) {
+                this.craftSelection.add(i);
+            }
+            // 켈트 축복 대체 (아무 축복이나 사용)
+            else if (this.getArtLevel('celt') >= 2 && c.cat === 'blessing') {
+                this.craftSelection.add(i);
+            }
+        });
+
+        // UI 갱신 (선택된 상태 보여주기 - 시각적 디버깅용)
+        this.renderCraftUI();
+    }
+
+// [FIX INTEGRATED] AI 통합 패치: 자아 상실, 덱 고갈, 로직 오류 동시 해결
+
+    // [FIX] AI 자원 확보: 행동 주체(ai)를 명확히 전달하여 오류 방지
+    aiActionGather(plan) {
+        const ai = this.cp; // 함수 시작 시점의 플레이어(P2)를 기억
+        
+        // 0. 축복 처리
+        if (plan.needBless) {
+            const blessIdx = this.fieldBless.findIndex(c => c.type === plan.art.type);
+            if (blessIdx !== -1) this._aiForceGetCard('blessing', blessIdx);
+            else {
+                const grailIdx = ai.hand.findIndex(c => c.cat === 'loki' && c.extra.type === 'active_reset_bless');
+                if (grailIdx !== -1) {
+                    this.addLog(`[AI] 축복 리셋을 위해 '파괴된 성배' 사용`);
+                    this._aiForceUseLoki(grailIdx);
+                    setTimeout(() => this.aiTurn(), 800);
+                    return;
+                }
+                this._aiForceDraw('blessing');
+            }
+            // [핵심] 행동한 AI(ai 변수)를 직접 전달
+            this.finalizeAIAction(ai, plan.art);
+            return;
+        }
+
+        // 1. 노르드 콤보
+        if (this.getArtLevel('nord') > 0 && this.aiTryNordAction(plan.art)) {
+            return;
+        }
+
+        // 2. 자원 탐색 (지능 개선판 적용)
+        let neededTypes = [];
+        let myRes = {}; 
+        ai.hand.forEach(c => { if(c.cat==='resource') myRes[c.type] = (myRes[c.type]||0)+c.val; });
+        
+        for(const [t, req] of Object.entries(plan.art.cost)) {
+            if(myRes[t] < req) neededTypes.push(t);
+        }
+
+        let targetIdx = -1;
+        // 우선순위 1: 필요한 자원 중 고가치(3 이상)
+        for (let i = 0; i < this.fieldRes.length; i++) {
+            if (neededTypes.includes(this.fieldRes[i].type) && this.fieldRes[i].val >= 3) {
+                targetIdx = i; break;
+            }
+        }
+        // 우선순위 2: 필요한 자원이라면 수치가 낮아도(2) 확보 (멈춤 방지)
+        if (targetIdx === -1) {
+            for (let i = 0; i < this.fieldRes.length; i++) {
+                if (neededTypes.includes(this.fieldRes[i].type)) {
+                    targetIdx = i; break;
+                }
+            }
+        }
+        // 우선순위 3: 고가치(6 이상) 범용
+        if (targetIdx === -1) {
+            for (let i = 0; i < this.fieldRes.length; i++) {
+                if (this.fieldRes[i].val >= 6) { targetIdx = i; break; }
+            }
+        }
+        // 우선순위 4: 보험용 중가치(4 이상)
+        if (targetIdx === -1) {
+             for (let i = 0; i < this.fieldRes.length; i++) {
+                if (this.fieldRes[i].val >= 4) { targetIdx = i; break; }
+            }
+        }
+
+        if (targetIdx !== -1) this._aiForceGetCard('resource', targetIdx);
+        else this._aiForceDraw('resource');
+
+        // [핵심] 행동한 AI(ai 변수)를 직접 전달
+        this.finalizeAIAction(ai, plan.art);
+    }
+
+    // [New] AI 전용 자원 획득 함수 (핸드 제한 무시)
+    _aiForceGetCard(cat, idx) {
+        const ai = this.cp;
+        const list = cat === 'resource' ? this.fieldRes : this.fieldBless;
+        const card = list[idx];
+        const costKey = cat === 'resource' ? 'RES' : 'BLESS';
+        const cost = this.getCost(costKey);
+
+        const targetId = cat === 'resource' ? 'marketRes' : 'marketBless';
+        const targetEl = document.querySelector(`#${targetId} > div:nth-child(${idx+1})`);
+
+        this.addLog(`[P${ai.id}] ${cat==='resource' ? RES_NAMES[card.type] : '축복'} 획득`);
+        
+        this.animateAIAction(targetEl, () => {
+            ai.hand.push(card);
+            list.splice(idx, 1);
+            this.consumeTime(cost);
+            this.fill(cat, this.getMarketSize(cat));
+            this.render();
+        });
+    }
+
+    // [FIX] AI 강제 드로우: 덱이 없을 경우 멈추는 버그 수정
+    _aiForceDraw(cat) {
+        const ai = this.cp;
+        const deck = cat === 'resource' ? this.deckRes : this.deckBless;
+        const costKey = cat === 'resource' ? 'RES' : 'BLESS';
+        const cost = this.getCost(costKey);
+        
+        const card = deck.draw();
+        
+        // [핵심 수정] 덱이 비어서 카드를 못 뽑으면, 로그를 남기고 시간만 소모하여 턴을 넘김
+        if (!card) {
+            this.addLog(`[AI P${ai.id}] ${cat} 덱이 고갈되어 행동을 쉽니다.`);
+            this.consumeTime(cost > 0 ? cost : 1); // 1시간 강제 소모
+            return;
+        }
+
+        const deckId = cat === 'resource' ? 'deckRes' : 'deckBless';
+        this.addLog(`[P${ai.id}] ${cat} 덱 드로우`);
+
+        this.animateAIAction(document.getElementById(deckId), () => {
+            ai.hand.push(card);
+            this.consumeTime(cost);
+            this.render();
+        });
+    }
+
+    // [FIX] AI 핸드 정리: 현재 턴인 AI(aiPlayer)를 명확히 지정하여 처리
+    finalizeAIAction(aiPlayer, targetArt) {
+        // 기존: const ai = this.cp; (이렇게 하면 턴이 넘어간 뒤 다음 사람을 잡음)
+        // 변경: 매개변수로 받은 aiPlayer(행동한 당사자)를 사용
+        if (aiPlayer.getHandCount() > CONFIG.HAND_LIMIT) {
+            this.aiSmartDiscard(aiPlayer, targetArt);
+        }
+    }
+
+    aiSmartDiscard(ai, targetArt) {
+        while (ai.getHandCount() > CONFIG.HAND_LIMIT) {
+            let scores = ai.hand.map((c, i) => {
+                let score = 0;
+                if (c.cat === 'loki') score = 500;
+                else if (targetArt) {
+                    if (c.cat === 'blessing' && c.type === targetArt.type) score = 300;
+                    else if (c.cat === 'resource' && targetArt.cost[c.type] > 0) score = 100 + (c.val * 10);
+                }
+                if (score === 0 && c.cat === 'resource' && c.val >= 6) score = 50;
+                if (score === 0) {
+                    if (c.cat === 'resource') score = c.val;
+                    else score = 10;
+                }
+                return { idx: i, score: score };
+            });
+
+            scores.sort((a, b) => a.score - b.score);
+            const worst = scores[0];
+            const c = ai.hand[worst.idx];
+            
+            ai.hand.splice(worst.idx, 1);
+            if (c.cat === 'resource') this.deckRes.discard(c);
+            else if (c.cat === 'blessing') this.deckBless.discard(c);
+            
+            this.addLog(`[AI] 핸드 정리: ${c.cat==='resource' ? c.val : '카드'} 버림`);
+        }
+        this.render();
+    }
+
+    aiEmergencyAction() {
+        // 멈춤 방지용 비상 탈출
+        const ai = this.cp;
+        if (ai.hand.length > 0) ai.hand.shift(); // 카드 한 장 버림
+        this._aiForceDraw('resource'); // 강제 드로우
+    }
+    aiTryNordAction(targetArt) {
+        const nordLv = this.getArtLevel('nord');
+        const limitSum = nordLv >= 3 ? 14 : (nordLv >= 2 ? 9 : 6);
+        const limitCount = nordLv >= 3 ? 3 : 2;
+        let neededTypes = Object.keys(targetArt.cost);
+        let indices = this.fieldRes.map((_, i) => i);
+        let bestCombo = null; let bestScore = -1; 
+        
+        const evaluateCombo = (idxs) => {
+            let sum = 0; let hasNeeded = false;
+            for(let idx of idxs) { const c = this.fieldRes[idx]; sum += c.val; if (neededTypes.includes(c.type)) hasNeeded = true; }
+            if (sum > limitSum) return -1; 
+            let score = sum; if (hasNeeded) score += 20; return score;
+        };
+        
+        // Simple combination logic (2 cards)
+        for (let i = 0; i < indices.length; i++) {
+            for (let j = i + 1; j < indices.length; j++) {
+                const combo = [indices[i], indices[j]]; const evaluate = evaluateCombo(combo);
+                if (evaluate > bestScore) { bestScore = evaluate; bestCombo = combo; }
+            }
+        }
+        
+        if (bestCombo && bestCombo.length >= 2) {
+            if (this.cp.hand.length + bestCombo.length > CONFIG.HAND_LIMIT + 2) return false; 
+            bestCombo.sort((a, b) => b - a);
+            let logMsg = []; const firstCardIdx = bestCombo[0];
+            const targetEl = document.querySelector(`#marketRes > div:nth-child(${firstCardIdx+1})`);
+            
+            this.animateAIAction(targetEl, () => {
+                bestCombo.forEach(idx => {
+                    const c = this.fieldRes[idx]; this.cp.hand.push(c); this.fieldRes.splice(idx, 1);
+                    logMsg.push(`${RES_NAMES[c.type]}(${c.val})`);
+                });
+                const cost = this.getCost('RES'); this.consumeTime(cost);
+                this.fill('resource', this.getMarketSize('resource')); this.render();
+                this.addLog(`[AI] 노르드 능력 발동! (${logMsg.join(', ')})`);
+            });
+            return true; 
+        }
+        return false; 
+    }addLog(msg) { const log = document.getElementById('gameLog'); const p = document.createElement('div'); p.innerText = msg; log.prepend(p); }
+    addNightLog(msg) { const log = document.getElementById('nightLog'); const p = document.createElement('div'); p.innerText = msg; log.prepend(p); }
+    
+    fill(cat, max) {
+        const field = cat === 'resource' ? this.fieldRes : (cat === 'blessing' ? this.fieldBless : this.fieldArt);
+        const deck = cat === 'resource' ? this.deckRes : (cat === 'blessing' ? this.deckBless : this.deckArt);
+        while(field.length < max) { const c = deck.draw(); if(c) field.push(c); else break; }
+        
+        // Libra Effect: Auto-reset market on 4 duplicates
+        if (cat === 'resource' && this.constellationMode && this.activeConstellation.type === 'market_auto_reset') {
+            const counts = {}; field.forEach(c => { counts[c.type] = (counts[c.type]||0) + 1; });
+            const hasFour = Object.values(counts).some(cnt => cnt >= 4);
+            if (hasFour) {
+                this.addLog(`[천칭자리] 같은 자원 4장 감지! 시장을 교체합니다.`);
+                field.forEach(c => deck.discard(c)); field.length = 0;
+                while(field.length < max) { const c = deck.draw(); if(c) field.push(c); else break; }
+            }
+        }
+    }
+
+    getArtLevel(type) { 
+        let count = this.cp.artifacts.filter(a => a.type === type).length;
+        const celtCount = this.cp.artifacts.filter(a => a.type === 'celt').length;
+        
+        // [Bug Fix] Celt Mimic adds +1 level, not full count
+        if (celtCount >= 3 && this.cp.celtMimicMode === type) { 
+            count += 1; 
+        }
+        
+        // Celt itself doesn't benefit from mimic
+        if (type === 'celt' && celtCount >= 3 && this.cp.celtMimicMode !== null) { return 0; }
+        
+        return count;
+    }
+
+    getCost(action) {
+        if (this.devMode) return 0;
+        let cost = CONFIG.COST[action];
+        const egyptLv = this.getArtLevel('egypt');
+        if (action === 'RESERVE' && egyptLv >= 1) cost -= 1;
+        if (action === 'RES' && egyptLv >= 2) cost -= 1;
+        if ((action === 'BLESS' || action === 'ART') && egyptLv >= 3) cost -= 1;
+        return Math.max(0, cost);
+    }
+
+    canAct(cost) {
+        if (this.cp.id !== 1 && !this.devMode) return false;
+        if (this.cp.time >= CONFIG.MAX_TIME) { alert("시간이 모두 소진되었습니다."); return false; } 
+        return true; 
+    }
+
+    checkHandFull(add=1) { 
+        const cnt = this.cp.getHandCount();
+        if(cnt + add > CONFIG.HAND_LIMIT + 1) { alert(`핸드가 가득 찼습니다! (최대 9장까지 일시 허용)\n먼저 카드를 버려주세요.`); return true; } 
+        return false;
+    }
+
+    clickResourceCard(idx) { if (this.getArtLevel('nord') > 0) this.clickResource(idx); else this.getCard('resource', idx); }
+    
+    clickResource(idx) {
+        if (this.cp.isAI) { this.getCard('resource', idx); return; }
+        if (!this.cp.nordMode) { this.cp.nordMode = true; this.cp.nordSelected.clear(); }
+        if (this.cp.nordSelected.has(idx)) this.cp.nordSelected.delete(idx); else this.cp.nordSelected.add(idx);
+        this.render();
+    }
+
+    confirmNord() {
+        const nordLv = this.getArtLevel('nord');
+        const indices = Array.from(this.cp.nordSelected);
+        const cards = indices.map(i => this.fieldRes[i]);
+        const sum = cards.reduce((a, b) => a + b.val, 0); const count = cards.length;
+        let limitSum = nordLv >= 3 ? 14 : (nordLv >= 2 ? 9 : 6); let limitCount = nordLv >= 3 ? 3 : 2;
+        
+        if (count > limitCount) { alert(`최대 ${limitCount}장 가능`); return; }
+        
+        // [수정] 1장만 선택한 경우(일반 구매)는 합계 제한을 무시함
+        if (count > 1 && sum > limitSum) { alert(`합계 ${limitSum} 초과 (1장만 선택 시 일반 구매 가능)`); return; }
+        
+        if (count === 0) return;
+        
+        const cost = this.getCost('RES');
+        if (!this.devMode && !this.canAct(cost)) return;
+        if (!this.devMode && this.checkHandFull(count)) return;
+        
+        indices.sort((a,b)=>b-a);
+        indices.forEach(i => { this.cp.hand.push(this.fieldRes[i]); this.fieldRes.splice(i, 1); });
+        this.consumeTime(cost);
+        this.fill('resource', this.getMarketSize('resource'));
+        this.cp.nordMode = false; this.cp.nordSelected.clear(); this.render();
+    }
+    
+    cancelNord() { this.cp.nordMode = false; this.cp.nordSelected.clear(); this.render(); }
+
+    getCard(cat, idx) {
+        const costKey = cat === 'resource' ? 'RES' : 'BLESS';
+        const cost = this.getCost(costKey);
+        if (!this.devMode) { if (!this.cp.isAI && !this.canAct(cost)) return; if (this.checkHandFull()) return; }
+        
+        const list = cat === 'resource' ? this.fieldRes : this.fieldBless;
+        const card = list[idx];
+        
+        if (this.cp.isAI) {
+            const info = cat === 'resource' ? `${RES_NAMES[card.type]} (${card.val})` : `${TYPE_NAMES[card.type]} 축복`;
+            this.addLog(`[P${this.cp.id}] 시장에서 획득: ${info}`);
+            const targetId = cat === 'resource' ? 'marketRes' : 'marketBless';
+            const targetEl = document.querySelector(`#${targetId} > div:nth-child(${idx+1})`);
+            this.animateAIAction(targetEl, () => {
+                this.cp.hand.push(card); list.splice(idx, 1); this.consumeTime(cost);
+                this.fill(cat, this.getMarketSize(cat)); this.render();
+            });
+            return;
+        }
+        
+        this.cp.hand.push(card); list.splice(idx, 1);
+        this.consumeTime(cost); this.fill(cat, this.getMarketSize(cat)); this.render();
+    }
+
+    drawFromDeck(cat) {
+        if (!this.cp.isAI) audioManager.playSelect();
+        const costKey = cat === 'resource' ? 'RES' : 'BLESS';
+        const cost = this.getCost(costKey);
+        if (!this.devMode && !this.cp.isAI) { if (!this.canAct(cost)) return; if (this.checkHandFull()) return; }
+        
+        const deck = cat === 'resource' ? this.deckRes : this.deckBless;
+        if (this.cp.isAI) {
+            const card = deck.draw(); if(!card) return;
+            const deckId = cat === 'resource' ? 'deckRes' : 'deckBless';
+            this.addLog(`[P${this.cp.id}] ${cat==='resource'?'자원':'축복'} 덱에서 뽑기`);
+            this.animateAIAction(document.getElementById(deckId), () => {
+                this.cp.hand.push(card); this.consumeTime(cost); this.render();
+            });
+            return;
+        }
+        
+        const card = deck.draw(); if (!card) { alert("덱 없음!"); return; }
+        this.cp.hand.push(card); this.consumeTime(cost); this.render();
+    }
+
+    reserveFromDeck() {
+        if (this.cp.isAI) return;
+        audioManager.playSelect();
+        if (this.cp.reserved.length >= 1) { alert("보관함이 가득 찼습니다."); return; }
+        const cost = this.getCost('RESERVE');
+        if (!this.devMode && !this.canAct(cost)) return;
+        
+        const card = this.deckArt.draw();
+        if(!card) { alert("유물 덱이 비었습니다."); return; }
+        this.cp.reserved.push(card); this.consumeTime(cost); this.render();
+    }
+
+    swap(cat) {
+        const cost = this.getCost('SWAP');
+        if (!this.devMode && !this.canAct(cost)) return;
+        
+        const list = cat === 'resource' ? this.fieldRes : (cat === 'blessing' ? this.fieldBless : this.fieldArt);
+        const deck = cat === 'resource' ? this.deckRes : (cat === 'blessing' ? this.deckBless : this.deckArt);
+        
+        list.forEach(c => deck.discard(c)); list.length = 0;
+        this.fill(cat, this.getMarketSize(cat)); this.consumeTime(cost); this.render();
+    }
+
+    onHandCardClick(i) { this.discard(i); }
+    
+    discard(idx) {
+        const c = this.cp.hand[idx]; if(!c) return; 
+        // Handle Active Loki Items
+        if (c.cat === 'loki' && c.extra.type.startsWith('active_')) { this.useLokiItem(idx); return; }
+        
+        if(!this.cp.isAI && !confirm("이 카드를 버리시겠습니까?")) return;
+        this.cp.hand.splice(idx, 1); 
+        if(c.cat === 'resource') this.deckRes.discard(c); else if(c.cat === 'blessing') this.deckBless.discard(c); 
+        this.render();
+        if (!this.cp.isAI && this.cp.id === 1) { this.determineNextTurn(); }
+    }
+
+    useLokiItem(idx) { 
+        if (this.cp.isAI) return; 
+        const card = this.cp.hand[idx]; const type = card.extra.type;
+        
+        if (type.startsWith("passive_") || type.startsWith("bless_") || type.startsWith("res_")) { alert("제작 재료용입니다."); return; }
+        
+      if (type === "active_swap") {
+            if (this.cp.reserved.length === 0) { alert("보관 중인 유물이 없습니다."); return; }
+            if (this.fieldArt.length === 0) { alert("교환할 중앙 유물이 없습니다."); return; }
+            this.openSwapModal(idx); return; 
+        }
+        
+        if (type === "active_peek") {
+            if (this.deckArt.getCount() < 3) { alert("유물 덱이 부족합니다."); return; }
+            // [수정] 미래일기는 보관함 제한을 무시하고 발동 (예외 처리)
+            this.openFutureDiary(idx);
+            return;
+        }
+
+        if(!confirm(`[${card.extra.name}] 사용하시겠습니까?`)) return;
+        
+        let success = false;
+        if (type === "active_time") { this.cp.time = Math.max(0, this.cp.time - 1); alert("시간 -1H"); success = true; }
+        else if (type === "active_reset") { 
+            // [수정] 혼돈의 채석망치: 시간 소모 없이 즉시 교체
+            this.fieldRes.forEach(c => this.deckRes.discard(c)); this.fieldRes.length = 0;
+            this.fill('resource', this.getMarketSize('resource')); 
+            this.render();
+            success = true; 
+        }
+        else if (type === "active_reset_bless") { 
+            // [수정] 파괴된 성배: 시간 소모 없이 즉시 교체
+            this.fieldBless.forEach(c => this.deckBless.discard(c)); this.fieldBless.length = 0;
+            this.fill('blessing', this.getMarketSize('blessing'));
+            this.render();
+            success = true; 
+        }
+        else if (type === "active_draw") { 
+            // Discard 2 resources, Draw 2
+            const resIndices = this.cp.hand.map((c, i) => c.cat === 'resource' ? i : -1).filter(i => i !== -1);
+            if (resIndices.length < 2) { alert("버릴 자원 카드가 부족합니다."); return; }
+            // For simplicity in this patched version, just remove first 2 resources
+            this.cp.hand.splice(resIndices[1], 1); 
+            this.cp.hand.splice(resIndices[0], 1);
+            this.drawFromDeck('resource'); this.drawFromDeck('resource');
+            success = true; 
+        } 
+        
+        if(success) { this.cp.hand.splice(idx, 1); this.render(); }
+    }
+
+    // --- Future Diary Logic ---
+    openFutureDiary(handIdx) {
+        this.futureDiaryState = { active: true, handIdx: handIdx };
+        const cards = this.deckArt.peek(3);
+        const listEl = document.getElementById('futureDiaryList'); listEl.innerHTML = '';
+        cards.forEach((c, i) => {
+             const div = document.createElement('div');
+             div.className = `card artifact type-${c.type}`;
+             div.innerHTML = `<div class="artifact-info"><div class="art-name">${c.name}</div><div class="art-score">★ ${c.score}</div></div>`;
+             div.onclick = () => this.confirmFutureDiary(c);
+             listEl.appendChild(div);
+        });
+        document.getElementById('futureDiaryModal').style.display = 'flex';
+    }
+
+    confirmFutureDiary(selectedCard) {
+        this.cp.reserved.push(selectedCard);
+        // Remove used card from hand
+        this.cp.hand.splice(this.futureDiaryState.handIdx, 1);
+        // Shuffle deck to simulate "putting others back" (Simplified)
+        this.deckArt.shuffle();
+        
+        document.getElementById('futureDiaryModal').style.display = 'none';
+        this.futureDiaryState = { active: false, handIdx: -1 };
+        this.addLog("미래 일기로 유물을 보관했습니다.");
+        this.render();
+    }
+
+    openCraftModal(idx, fromReserve) {
+        if (this.cp.isAI) return;
+        if (!this.devMode && this.cp.time >= CONFIG.MAX_TIME) { alert("시간 초과!"); return; }
+        
+        this.selectedArtIdx = idx; 
+        this.isWorkingFromReserve = fromReserve;
+        
+        // 선택 초기화 (단순화됨)
+        this.craftSelection.clear(); 
+        this.cp.olympusDiscount = { type: null, amount: 0 };
+        
+        const art = fromReserve ? this.cp.reserved[idx] : this.fieldArt[idx]; 
+        if(!art) return;
+        
+        document.getElementById('craftModal').style.display = 'flex';
+        
+        // 타겟 유물 정보 표시
+        const targetEl = document.getElementById('craftTargetCard');
+        targetEl.innerHTML = `<div class="card artifact type-${art.type}"><div class="artifact-info"><div class="art-type badge-${art.type}" style="font-size:10px;">${TYPE_NAMES[art.type]}</div><div class="art-name">${art.name}</div><div class="art-score">★ ${art.score}</div></div></div>`;
+        
+        // 올림포스 할인 옵션 표시
+        const olympusLv = this.getArtLevel('olympus'); 
+        const olympusDiv = document.getElementById('olympusOption'); 
+        const olympusRadios = document.getElementById('olympusRadios');
+        olympusRadios.innerHTML = '';
+        
+        if (olympusLv > 0) {
+            let discount = olympusLv >= 3 ? 12 : (olympusLv >= 2 ? 5 : 2);
+            document.getElementById('olympusVal').innerText = discount; 
+            olympusDiv.style.display = 'block';
+            olympusRadios.innerHTML = `<label><input type="radio" name="olympus" value="none" checked onchange="game.setOlympusDiscount(null, 0)"> 없음</label>`;
+            Object.keys(art.cost).forEach(resType => { 
+                olympusRadios.innerHTML += `<label><input type="radio" name="olympus" value="${resType}" onchange="game.setOlympusDiscount('${resType}', ${discount})"> ${RES_NAMES[resType]}</label>`; 
+            });
+        } else { 
+            olympusDiv.style.display = 'none'; 
+        }
+        
+        // 보관 버튼 처리
+        const btnRes = document.getElementById('btnReserveInModal');
+        if(fromReserve) {
+            btnRes.style.display = 'none';
+        } else {
+            const cost = this.getCost('RESERVE'); 
+            btnRes.style.display = 'inline-block';
+            btnRes.disabled = (this.cp.reserved.length >= 1); 
+            btnRes.innerText = btnRes.disabled ? "가득 참" : `📦 보관 (${cost}H)`;
+        }
+        
+        this.renderCraftUI();
+    }
+
+    // 제작 모달 닫기 함수
+    closeCraftModal() { 
+        document.getElementById('craftModal').style.display = 'none'; 
+        this.craftSelection.clear(); 
+    }
+// [수정된 renderCraftUI: 켈트 변환 버튼 및 복잡한 로직 삭제됨]
+    renderCraftUI() {
+        // 1. DOM 엘리먼트 확보
+        const handGrid = document.getElementById('craftHandGrid');
+        const paySlot = document.getElementById('paymentSlot');
+        const statusEl = document.getElementById('craftStatus');
+        
+        handGrid.innerHTML = '';
+        paySlot.innerHTML = '';
+
+        // [삭제됨] 켈트 변환 모드 버튼 로직 제거 (흔적기관 삭제 완료)
+        const oldBtn = document.getElementById('btnCeltToggle');
+        if(oldBtn) oldBtn.remove();
+
+        // 2. 현재 제작 대상 유물 정보 가져오기
+        let artIdx = this.cp.isAI ? this.cp.aiTargetIdx : this.selectedArtIdx;
+        if (artIdx === -1 || artIdx === null) return; 
+
+        const targetArt = this.isWorkingFromReserve ? this.cp.reserved[artIdx] : this.fieldArt[artIdx];
+        if (!targetArt) return;
+
+        // 3. 핸드 순회하며 카드 렌더링
+        this.cp.hand.forEach((c, i) => {
+            const div = document.createElement('div');
+            
+            // 스타일 및 클래스 정의
+            if (c.cat === 'loki') {
+                div.className = 'card type-loki';
+                div.setAttribute('data-tooltip', `${c.extra.name}\n${c.extra.desc}`);
+            } else {
+                div.className = `card type-${c.type}`;
+            }
+            
+            div.style.backgroundImage = `url('${c.getImagePath()}')`;
+            div.style.width = '60px';
+            div.style.height = '87px';
+            div.style.cursor = 'pointer';
+            
+            // [단순화] 클릭 이벤트: 단순히 선택/해제만 수행
+            div.onclick = () => {
+                audioManager.playSelect();
+                if (this.craftSelection.has(i)) {
+                    this.craftSelection.delete(i);
+                } else {
+                    this.craftSelection.add(i);
+                }
+                this.renderCraftUI(); // 재렌더링
+            };
+
+            // 4. 선택 상태에 따른 위치 분기 (지불 슬롯 vs 내 핸드)
+            const isPaySelected = this.craftSelection.has(i);
+
+            if (isPaySelected) {
+                // 선택된 카드는 지불 슬롯으로 이동 (초록색 테두리)
+                div.style.border = "2px solid #00e676"; 
+                div.style.boxShadow = "0 0 5px #00e676";
+                paySlot.appendChild(div);
+            } else {
+                // 선택되지 않은 카드는 핸드 그리드에 유지
+                handGrid.appendChild(div);
+            }
+        });
+
+        // 5. 실시간 유효성 검사 및 상태 메시지 업데이트
+        this.validateCraft(targetArt, statusEl);
+    }
+
+// [수정] 망각의 주판: 교환 모달 열기 (안전성 강화)
+    openSwapModal(handIdx) {
+        console.log("망각의 주판 모달 열림. 사용한 핸드 카드 인덱스:", handIdx);
+        this.swapState = { handIdx: handIdx, reserveIdx: -1, marketIdx: -1 };
+        
+        const myDiv = document.getElementById('swapMyReserved');
+        const marketDiv = document.getElementById('swapMarket');
+        const btn = document.getElementById('btnExecuteSwap');
+        
+        // 초기화: 버튼 비활성화 및 기존 내용 삭제
+        btn.disabled = true;
+        btn.classList.add('disabled'); // 시각적 비활성화 확실하게 처리
+        myDiv.innerHTML = '';
+        marketDiv.innerHTML = '';
+
+        // 내 보관함 렌더링
+        this.cp.reserved.forEach((c, i) => {
+            const div = document.createElement('div');
+            div.className = `card artifact type-${c.type} card-scale-down`;
+            div.innerHTML = `<div class="artifact-info"><div class="art-name">${c.name}</div><div class="art-score">★${c.score}</div></div>`;
+            div.onclick = () => this.selectSwapCard('reserve', i);
+            div.id = `swap-res-${i}`;
+            div.style.cursor = 'pointer'; // 클릭 가능 표시
+            myDiv.appendChild(div);
+        });
+
+        // 시장 유물 렌더링
+        this.fieldArt.forEach((c, i) => {
+            const div = document.createElement('div');
+            div.className = `card artifact type-${c.type} card-scale-down`;
+            div.innerHTML = `<div class="artifact-info"><div class="art-name">${c.name}</div><div class="art-score">★${c.score}</div></div>`;
+            div.onclick = () => this.selectSwapCard('market', i);
+            div.id = `swap-mkt-${i}`;
+            div.style.cursor = 'pointer'; // 클릭 가능 표시
+            marketDiv.appendChild(div);
+        });
+
+        document.getElementById('swapModal').style.display = 'flex';
+    }
+
+    // [수정] 교환 카드 선택 처리 (선택 시각효과 및 버튼 활성화 체크)
+    selectSwapCard(target, idx) {
+        audioManager.playSelect(); // 선택음 재생
+
+        if (target === 'reserve') {
+            this.swapState.reserveIdx = idx;
+            // UI 하이라이트 (기존 선택 제거 후 새 선택 적용)
+            const list = document.getElementById('swapMyReserved').children;
+            Array.from(list).forEach(el => el.classList.remove('swap-select')); // Array.from으로 안전하게 순회
+            
+            const targetEl = document.getElementById(`swap-res-${idx}`);
+            if(targetEl) targetEl.classList.add('swap-select');
+        } else {
+            this.swapState.marketIdx = idx;
+            // UI 하이라이트
+            const list = document.getElementById('swapMarket').children;
+            Array.from(list).forEach(el => el.classList.remove('swap-target'));
+            
+            const targetEl = document.getElementById(`swap-mkt-${idx}`);
+            if(targetEl) targetEl.classList.add('swap-target');
+        }
+
+        // 둘 다 선택되었는지 확인하여 버튼 상태 업데이트
+        const btn = document.getElementById('btnExecuteSwap');
+        const isReady = (this.swapState.reserveIdx !== -1 && this.swapState.marketIdx !== -1);
+        
+        btn.disabled = !isReady;
+        if(isReady) {
+            btn.classList.remove('disabled');
+            btn.style.opacity = '1';
+            btn.style.cursor = 'pointer';
+        } else {
+            btn.classList.add('disabled');
+            btn.style.opacity = '0.5';
+            btn.style.cursor = 'not-allowed';
+        }
+    }
+
+    // [수정] 교환 실행 (실제 데이터 교환 및 로그 출력)
+    executeSwap() {
+        if (this.swapState.reserveIdx === -1 || this.swapState.marketIdx === -1) {
+            alert("보관함과 시장에서 각각 카드를 1장씩 선택해주세요.");
+            return;
+        }
+        
+        const resIdx = this.swapState.reserveIdx;
+        const mktIdx = this.swapState.marketIdx;
+        const handIdx = this.swapState.handIdx;
+        
+        // 데이터 유효성 검사
+        if (!this.cp.reserved[resIdx] || !this.fieldArt[mktIdx]) {
+            alert("교환 대상 카드가 유효하지 않습니다.");
+            return;
+        }
+
+        // 1. 데이터 교환 (보관함 <-> 시장)
+        const temp = this.cp.reserved[resIdx];
+        this.cp.reserved[resIdx] = this.fieldArt[mktIdx];
+        this.fieldArt[mktIdx] = temp;
+        
+        // 2. 망각의 주판(로키 카드) 소모
+        // 주의: 카드를 사용하고 아직 버리지 않은 상태이므로, 여기서 버림 처리
+        if (this.cp.hand[handIdx]) {
+            const usedCard = this.cp.hand[handIdx];
+            this.cp.hand.splice(handIdx, 1);
+            // 로키 덱으로 버리지 않고 게임에서 제외하거나 덱으로 돌려보냄 (여기선 단순 제거)
+            this.addLog(`[망각의 주판] 사용 완료: ${usedCard.extra.name}`);
+        }
+        
+        this.addLog(`[교환] 보관함[${temp.name}] ↔ 시장[${this.cp.reserved[resIdx].name}]`);
+        
+        alert("🔄 교환이 완료되었습니다!");
+        
+        this.closeSwapModal();
+        this.render();
+    }
+    closeSwapModal() {
+        document.getElementById('swapModal').style.display = 'none';
+        this.swapState = { handIdx: -1, reserveIdx: -1, marketIdx: -1 };
+    }
+    // 제작 재료 카드 선택/해제 토글 함수
+    toggleCraftCard(handIdx) { 
+        if(this.craftSelection.has(handIdx)) this.craftSelection.delete(handIdx); 
+        else this.craftSelection.add(handIdx); 
+        this.renderCraftUI(); 
+    }
+
+// [FIXED] 로키 카드(OR)의 유동적 계산 로직 복구
+    validateCraft(art, statusEl) {
+        if (this.devMode) { 
+            statusEl.innerHTML = `<div class="status-ok">🛠️ 개발자 모드</div>`; 
+            return { valid: true, isGrace: false, useFree: true }; 
+        }
+
+        const payCards = Array.from(this.craftSelection).map(i => this.cp.hand[i]);
+        let valid = true; let isGrace = true; let msg = "";
+
+        // 회중시계 체크
+        const hasFreeCard = payCards.some(c => c.cat === 'loki' && c.extra.type === 'passive_free');
+
+        // 합계 계산을 위한 변수
+        let currentSums = { adamantite:0, mithril:0, dragonBone:0, starFragment:0 };
+        let flexibleLoki = []; // 선택형(OR) 로키 카드는 따로 빼둠
+
+        // 1. 고정 수치 먼저 합산
+        payCards.forEach(c => {
+            if (c.cat === 'resource') {
+                let val = c.val;
+                // 황소자리
+                if(this.constellationMode && this.activeConstellation.type === 'passive_value_up' && c.type === this.taurusBonusType) val += 1;
+                currentSums[c.type] += val;
+            } else if (c.cat === 'loki' && c.extra.type === 'res_split') {
+                if (c.extra.mode === 'AND') {
+                    // 고정형(AND)은 즉시 합산
+                    c.extra.options.forEach(opt => currentSums[opt.type] += opt.val);
+                } else {
+                    // 선택형(OR)은 나중에 계산하기 위해 보류
+                    flexibleLoki.push(c.extra.options);
+                }
+            }
+        });
+
+        // 2. 선택형 로키 카드 최적 분배 (부족한 곳을 채우도록)
+        flexibleLoki.forEach(options => {
+            let applied = false;
+            // 옵션들을 순회하며 부족한 자원이 있다면 거기에 투입
+            for(let opt of options) {
+                let req = art.cost[opt.type] || 0;
+                // 올림포스 할인 고려
+                if (this.cp.olympusDiscount.type === opt.type) req = Math.max(0, req - this.cp.olympusDiscount.amount);
+                
+                if (currentSums[opt.type] < req) {
+                    currentSums[opt.type] += opt.val;
+                    applied = true;
+                    break; // 한 곳에 쓰면 끝
+                }
+            }
+            // 부족한 곳이 없으면 그냥 첫 번째에 더함 (어차피 충족)
+            if (!applied) {
+                currentSums[options[0].type] += options[0].val;
+            }
+        });
+
+        // 3. 최종 요구량 비교
+        for(const [resType, originalReq] of Object.entries(art.cost)) {
+            let req = originalReq;
+            // 올림포스 할인
+            if (this.cp.olympusDiscount.type === resType) req = Math.max(0, req - this.cp.olympusDiscount.amount);
+            
+            let val = currentSums[resType] || 0;
+            let statusText = (val >= req) ? "충족" : "부족";
+            if (val < req) valid = false;
+            if (val > req) isGrace = false; 
+
+            msg += `<div>${RES_NAMES[resType]}: ${val}/${req} ${statusText}</div>`;
+        }
+
+        // 4. 축복 체크
+        const celtLv = this.getArtLevel('celt');
+        if (celtLv >= 3) {
+            msg += `<div class="status-ok">켈트: 축복 면제</div>`;
+        } else {
+            const hasBless = payCards.some(c => 
+                (c.cat === 'blessing' && c.type === art.type) || 
+                (c.cat === 'loki' && c.extra.type === 'bless_split' && c.extra.tags.includes(art.type))
+            );
+            if(!hasBless) { msg += `<div class="status-fail">축복 필요</div>`; valid = false; }
+            else { msg += `<div class="status-ok">축복 확인</div>`; }
+        }
+
+        if(valid && isGrace) msg += "✨ 은총!";
+        statusEl.innerHTML = msg;
+        return { valid, isGrace, useFree: hasFreeCard };
+    }
+  
+
+  // [덮어쓰기] 단순화된 제작 실행 함수
+    executeCraft() {
+        try {
+            let artIdx = this.cp.isAI ? this.cp.aiTargetIdx : this.selectedArtIdx;
+            if (this.cp.isAI && artIdx === null) artIdx = this.selectedArtIdx;
+            const art = this.isWorkingFromReserve ? this.cp.reserved[artIdx] : this.fieldArt[artIdx]; 
+            
+            const result = this.validateCraft(art, document.createElement('div'));
+            if (!result.valid) { alert("조건이 충족되지 않았습니다."); return; }
+
+            const indices = Array.from(this.craftSelection).sort((a,b) => b - a);
+            
+            // 전갈자리 환급 로직
+            let scorpioRefundIdx = -1; let minVal = 999;
+            if (this.constellationMode && this.activeConstellation.type === 'craft_refund' && result.isGrace) {
+                 indices.forEach(idx => { const c = this.cp.hand[idx]; if (c.cat === 'resource' && c.val < minVal) { minVal = c.val; scorpioRefundIdx = idx; } });
+            }
+
+            indices.forEach(i => {
+                if (i === scorpioRefundIdx) {
+                     const c = this.cp.hand[i];
+                     if(!this.cp.isAI) alert(`[전갈자리] 자원(${c.val}) 환급!`);
+                } else {
+                    const c = this.cp.hand[i];
+                    this.cp.hand.splice(i, 1);
+                    if(c.cat==='resource') this.deckRes.discard(c);
+                    else if(c.cat==='blessing') this.deckBless.discard(c);
+                }
+            });
+
+            this.craftSelection.clear();
+            this.finalizeCraft(art, artIdx, result);
+
+        } catch (e) { console.error(e); }
+    }
+ // [FIX] 제작 완료 처리: 무료 제작 시에도 턴 계산이 되도록 수정
+    finalizeCraft(art, artIdx, result) {
+        let bonus = 0; 
+        if(result.isGrace) { 
+            if(art.score >= 24) bonus = 4; 
+            else if(art.score >= 10) bonus = 3; 
+            else bonus = 2; 
+        }
+        
+        const craftedArt = { ...art, isGrace: result.isGrace, finalScore: art.score + bonus, bonus: bonus };
+        this.cp.artifacts.push(craftedArt); 
+        this.cp.score += craftedArt.finalScore;
+        
+        // 카드 제거 처리
+        if (this.isWorkingFromReserve) this.cp.reserved.splice(artIdx, 1); 
+        else { this.fieldArt.splice(artIdx, 1); this.fill('artifact', 7); }
+        
+        const cost = this.getCost('ART'); 
+        
+        // [핵심 수정] 무료(회중시계)라도 0시간을 소모시켜 'determineNextTurn'을 트리거함
+        if (result.useFree) {
+            this.addLog(`[P${this.cp.id}] '부서진 회중시계'로 시간 소모 없이 제작!`);
+            this.consumeTime(0); 
+        } else {
+            this.consumeTime(cost);
+        }
+
+        this.closeCraftModal(); 
+        this.render();
+        
+        const log = `[P${this.cp.id}] "${craftedArt.name}" 제작 성공! (+${craftedArt.finalScore}점${result.isGrace?'/은총':' '})`;
+        if(this.cp.isAI) this.addLog(log);
+    }
+// [FIX] 누락된 AI 교환 로직 추가 (망각의 주판)
+    aiExecuteSwap(handIdx, reserveIdx, marketIdx) {
+        const ai = this.cp;
+        
+        // 유효성 검사
+        if (!ai.reserved[reserveIdx] || !this.fieldArt[marketIdx]) {
+            this.aiEmergencyAction(); // 대상이 사라졌으면 비상 탈출
+            return;
+        }
+
+        const myArt = ai.reserved[reserveIdx];
+        const marketArt = this.fieldArt[marketIdx];
+
+        // 교환 실행
+        ai.reserved[reserveIdx] = marketArt;
+        this.fieldArt[marketIdx] = myArt;
+
+        // 로키 카드 소모
+        const usedCard = ai.hand[handIdx];
+        if (usedCard) {
+            ai.hand.splice(handIdx, 1);
+            this.addLog(`[AI P${ai.id}] '망각의 주판' 사용: [${myArt.name}] ↔ [${marketArt.name}]`);
+        }
+
+        // 시간 소모 (교환은 1H)
+        this.consumeTime(this.getCost('SWAP'));
+        this.render();
+    }
+
+    // [FIX] 누락된 올림포스 할인 설정 함수 추가
+    setOlympusDiscount(type, amount) {
+        if (!type) {
+            this.cp.olympusDiscount = { type: null, amount: 0 };
+        } else {
+            this.cp.olympusDiscount = { type: type, amount: amount };
+        }
+        // 모달이 열려있다면 UI 갱신
+        if (document.getElementById('craftModal').style.display === 'flex') {
+            this.renderCraftUI();
+        }
+    }
+// [FIX] 보관 실행: AI가 보관함이 꽉 찼을 때 멈추지 않고 자원 확보로 선회하도록 수정
+    confirmReserve() {
+        // [안전장치] 보관함 한도 체크
+        if (this.cp.reserved.length >= 1) {
+            if (this.cp.isAI) {
+                this.addLog(`[AI P${this.cp.id}] 보관함이 가득 차 계획을 변경합니다.`);
+                // 멈추지 않고 즉시 자원 확보 행동으로 우회
+                // (null 체크를 위해 aiTargetIdx가 없으면 현재 선택된 인덱스 사용)
+                let artIdx = this.cp.aiTargetIdx !== null ? this.cp.aiTargetIdx : this.selectedArtIdx;
+                if(this.fieldArt[artIdx]) {
+                    // 가상의 계획 객체를 만들어 자원 확보로 넘김
+                    this.aiActionGather({ art: this.fieldArt[artIdx], needBless: false });
+                } else {
+                    // 대상마저 없으면 비상 탈출
+                    this.aiEmergencyAction();
+                }
+                return;
+            } else {
+                alert("보관함이 가득 찼습니다.");
+                return;
+            }
+        }
+
+        let artIdx = this.cp.isAI ? this.cp.aiTargetIdx : this.selectedArtIdx;
+        if (this.cp.isAI && artIdx === null) artIdx = this.selectedArtIdx;
+        
+        // 대상 유효성 검사
+        if (!this.fieldArt[artIdx]) {
+             if (this.cp.isAI) { this.aiEmergencyAction(); return; }
+             return;
+        }
+
+        const cost = this.getCost('RESERVE');
+        if (!this.cp.isAI && !this.canAct(cost)) return;
+        
+        const art = this.fieldArt[artIdx];
+
+        if (this.cp.isAI) {
+            const targetEl = document.querySelector(`#marketArt > div:nth-child(${artIdx+1})`);
+            this.addLog(`[P${this.cp.id}] "${art.name}" 보관함으로 이동`);
+            
+            this.animateAIAction(targetEl, () => {
+                this.cp.reserved.push(art);
+                this.fieldArt.splice(artIdx, 1);
+                this.consumeTime(cost); // 이집트 1단계면 0시간 소모 (정상 작동)
+                
+                this.fill('artifact', 7);
+                this.closeCraftModal();
+                this.render();
+                this.cp.aiTargetIdx = null;
+            });
+            return;
+        }
+        
+        audioManager.playSelect();
+        this.cp.reserved.push(art);
+        this.fieldArt.splice(artIdx, 1);
+        this.consumeTime(cost);
+        this.fill('artifact', 7);
+        this.closeCraftModal();
+        this.render();
+    }
+    getMedalType(score) { if(score >= 24) return 'Gold'; if(score >= 10) return 'Silver'; return 'Bronze'; }
+    
+    initMap() {
+        const track = document.getElementById('mapTiles'); track.innerHTML = '';
+        const radius = 100; const centerX = 140; const centerY = 140; 
+        for(let i=0; i<12; i++) {
+            const div = document.createElement('div'); const angle = (i / 12) * 2 * Math.PI - (Math.PI / 2);
+            div.className = 'map-tile' + (i===0 ? ' key-time start-point' : ''); div.innerText = i === 0 ? "12/0" : i;
+            const x = centerX + radius * Math.cos(angle); const y = centerY + radius * Math.sin(angle);
+            div.style.left = `${x}px`; div.style.top = `${y}px`; track.appendChild(div);
+        }
+        this.updateTimeUI();
+    }
+    
+    updateTimeUI() {
+        const radius = 100; const centerX = 140; const centerY = 140;
+        this.players.forEach(p => {
+            const piece = document.getElementById(`pieceP${p.id}`);
+            const effectiveTime = Math.min(p.time, 12); const displayTime = effectiveTime % 12;
+            const angle = (displayTime / 12) * 2 * Math.PI - (Math.PI / 2);
+            let x = centerX + radius * Math.cos(angle); let y = centerY + radius * Math.sin(angle);
+            const stackOffset = 6; x += p.stackOrder * stackOffset; y -= p.stackOrder * stackOffset;
+            piece.style.left = `${x}px`; piece.style.top = `${y}px`; piece.style.zIndex = 100 + p.stackOrder;
+            if(p.id === this.cp.id) piece.classList.add('active-turn'); else piece.classList.remove('active-turn');
+        });
+    }
+
+   startNightPhase() { 
+        // [수정] 처녀자리: 오버타임(12H 초과)이 없는 모든 플레이어에게 +2점
+        if (this.constellationMode && this.activeConstellation.type === 'day_end_score') {
+            this.players.forEach(p => {
+                // 시간이 MAX_TIME(12) 이하인 경우만 보상
+                if (p.time <= CONFIG.MAX_TIME) {
+                    p.score += 2; 
+                    this.addNightLog(`[처녀자리] P${p.id} 오버타임 없음 보너스 +2점`); 
+                }
+            });
+        }
+        document.getElementById('nightScreen').style.display = "flex"; document.getElementById('nightLog').innerHTML = ""; 
+        document.getElementById('btnRevealLoki').style.display = 'none'; document.getElementById('btnEndNight').style.display = 'none';
+        this.renderNightStatus();
+        this.lokiOffers = []; for(let i=0; i<6; i++) { this.lokiOffers.push(this.deckLoki.draw()); }
+        this.nightSelections = {}; 
+        const marketEl = document.getElementById('lokiMarket'); marketEl.innerHTML = '';
+        for(let i=1; i<=6; i++) {
+            const c = this.lokiOffers[i-1];
+            const div = document.createElement('div'); div.className = 'loki-slot';
+            div.onmouseenter = () => audioManager.playHover();
+            div.innerHTML = `<div class="loki-slot-num">${i}</div>`; div.id = `lokiSlot-${i}`;
+            div.onclick = () => { 
+                audioManager.playSelect(); 
+                this.onLokiSlotClick(i); 
+            };
+            if(c) { div.style.backgroundImage = `url('${c.getImagePath()}')`; div.setAttribute('data-tooltip', `${c.extra.name}\n${c.extra.desc}`); } 
+            else { div.innerHTML += `<span style="color:#555; margin:auto;">품절</span>`; }
+            marketEl.appendChild(div);
+        }
+        this.addNightLog("원하는 카드를 선택하고 [결과 공개]를 누르세요.");
+    }
+    
+    renderNightStatus() {
+        const handEl = document.getElementById('nightHand'); const artEl = document.getElementById('nightArtifacts');
+        handEl.innerHTML = ''; artEl.innerHTML = '';
+        if (this.players[0].hand.length === 0) handEl.innerHTML = "<span style='color:#777; font-size:12px;'>없음</span>";
+        else {
+            this.players[0].hand.forEach(c => {
+                 const div = document.createElement('div'); div.className = c.cat==='loki' ? 'card type-loki' : `card type-${c.type}`;
+                 div.style.backgroundImage = `url('${c.getImagePath()}')`; div.style.width = '50px'; div.style.height = '72px'; handEl.appendChild(div);
+            });
+        }
+        if (this.players[0].artifacts.length === 0) artEl.innerHTML = "<span style='color:#777; font-size:12px;'>없음</span>";
+        else {
+            this.players[0].artifacts.forEach(art => {
+                 const div = document.createElement('div'); div.className = `card artifact type-${art.type} card-scale-down`;
+                 div.style.width='50px'; div.style.height='72px';
+                 div.innerHTML = `<div class="art-name" style="font-size:8px;">${art.name}</div><div class="art-score" style="font-size:9px;">★${art.finalScore}</div>`;
+                 artEl.appendChild(div);
+            });
+        }
+    }
+    
+    onLokiSlotClick(num) {
+        this.nightSelections[1] = num;
+        for(let i=1; i<=6; i++) { document.getElementById(`lokiSlot-${i}`).classList.remove('selected'); }
+        document.getElementById(`lokiSlot-${num}`).classList.add('selected');
+        document.getElementById('btnRevealLoki').style.display = 'inline-block';
+    }
+    
+    revealLokiResults() {
+        document.getElementById('btnRevealLoki').style.display = 'none';
+        [2, 3, 4].forEach(pid => { this.nightSelections[pid] = Math.floor(Math.random() * 6) + 1; });
+        let counts = {}; Object.values(this.nightSelections).forEach(slot => { counts[slot] = (counts[slot] || 0) + 1; });
+        let logs = []; let conflictSlots = new Set();
+        for (const [slot, count] of Object.entries(counts)) {
+            if (count > 1) { conflictSlots.add(parseInt(slot)); const slotEl = document.getElementById(`lokiSlot-${slot}`); if(slotEl) slotEl.classList.add('conflict'); }
+        }
+        this.players.forEach(p => {
+            const choice = this.nightSelections[p.id]; const item = this.lokiOffers[choice-1];
+            const slotEl = document.getElementById(`lokiSlot-${choice}`);
+            if(slotEl) { const badge = document.createElement('span'); badge.className = 'loki-result-badge'; badge.innerText += `P${p.id} `; slotEl.appendChild(badge); }
+            if (conflictSlots.has(choice)) { logs.push(`[P${p.id}] ${choice}번 선택 -> 💥충돌! 획득 실패`); } 
+            else if (item) {
+                logs.push(`[P${p.id}] ${choice}번 선택 -> 획득! [${item.extra.name}]`);
+                if(item.extra.type === 'instant_score') p.score += 2; else p.hand.push(item);
+                this.lokiOffers[choice-1] = null; 
+            }
+        });
+        logs.forEach(msg => this.addNightLog(msg));
+        document.getElementById('btnEndNight').style.display = 'inline-block';
+    }
+
+    finishNight() { 
+        document.getElementById('nightScreen').style.display = "none"; 
+        // 3일차 밤이 끝날 때 임시 유물 회수
+        if (this.constellationMode && this.activeConstellation.type === 'temporary_artifact' && this.day === 3) {
+            this.players.forEach(p => {
+                // isTemp 속성이 있는 유물을 찾음
+                const idx = p.artifacts.findIndex(a => a.isTemp);
+                if (idx !== -1) {
+                    const removedArt = p.artifacts.splice(idx, 1)[0];
+                    if (p.id === 1) { // 플레이어에게만 알림
+                        alert(`[염소자리 기간 종료]\n대여했던 유물 [${removedArt.name}]이(가) 회수되었습니다.`);
+                    }
+                }
+            });
+        }
+        // [New] Game End Check
+        if (this.day >= CONFIG.MAX_DAYS) {
+            this.endGame();
+            return;
+        }
+
+        this.day++;
+        if (this.constellationMode && this.activeConstellation.type === 'daily_gift') {
+            const rewardDay = this.day; 
+            this.players.forEach(p => {
+                let gift = null; let msg = "";
+                if (rewardDay === 2) { gift = this.deckBless.draw(); msg = "축복"; }
+                else if (rewardDay === 3) { gift = this.deckRes.draw(); msg = "자원"; }
+                else if (rewardDay === 4) { gift = this.deckLoki.draw(); msg = "비밀거래"; }
+                if (gift) { p.hand.push(gift); if(p.id===1) alert(`[뱀주인자리] ${this.day}일차 아침 선물: ${msg} 카드 획득`); }
+            });
+        }
+        this.fieldRes.forEach(c => this.deckRes.discard(c)); this.fieldRes = [];
+        this.fieldBless.forEach(c => this.deckBless.discard(c)); this.fieldBless = [];
+        this.fill('resource', this.getMarketSize('resource')); this.fill('blessing', this.getMarketSize('blessing'));
+        this.players.forEach(p => { p.time = Math.max(0, p.time - CONFIG.MAX_TIME); });
+        this.render(); this.determineNextTurn();
+    }
+
+  // [FIX] 게임 종료 및 최종 점수 계산 (보너스 규칙 추가됨)
+    endGame() {
+        this.isGameEnded = true;
+        audioManager.pauseBgm();
+        // audioManager.playVictory(); // 승리 BGM 있다면 재생
+        
+        const container = document.getElementById('rankingContainer');
+        container.innerHTML = '';
+
+        // 1. [NEW] 추가 점수 계산 로직 적용
+        this.players.forEach(p => {
+            const counts = { olympus: 0, egypt: 0, nord: 0, celt: 0 };
+            p.artifacts.forEach(art => {
+                if (counts[art.type] !== undefined) counts[art.type]++;
+            });
+
+            let bonusScore = 0;
+            let bonusTexts = [];
+
+            // 규칙 1: 4종류 신화 모두 보유 시 +5점 (신화 통합)
+            if (counts.olympus > 0 && counts.egypt > 0 && counts.nord > 0 && counts.celt > 0) {
+                bonusScore += 5;
+                bonusTexts.push("🌈신화 통합(+5)");
+            }
+
+            // 규칙 2: 한 종류 4장 이상 시, 3장 초과분마다 +2점 (신화 전문화)
+            for (const [type, count] of Object.entries(counts)) {
+                if (count >= 4) {
+                    const extraPoints = (count - 3) * 2;
+                    bonusScore += extraPoints;
+                    bonusTexts.push(`${TYPE_NAMES[type]} 장인(+${extraPoints})`);
+                }
+            }
+
+            // 점수 합산 및 로그 저장
+            if (bonusScore > 0) {
+                p.score += bonusScore;
+                p.bonusDesc = bonusTexts.join(', ');
+                this.addLog(`[종료] Player ${p.id} 보너스 점수 +${bonusScore} (${p.bonusDesc})`);
+            } else {
+                p.bonusDesc = "";
+            }
+        });
+
+        // 2. 순위 정렬 (점수 -> 유물 수 -> 골드 등급 수)
+        const sorted = [...this.players].sort((a,b) => {
+            if (b.score !== a.score) return b.score - a.score;
+            if (b.artifacts.length !== a.artifacts.length) return b.artifacts.length - a.artifacts.length;
+            const bGold = b.artifacts.filter(x=>x.grade==='Gold').length;
+            const aGold = a.artifacts.filter(x=>x.grade==='Gold').length;
+            return bGold - aGold;
+        });
+
+        // 3. 결과 화면 렌더링
+        sorted.forEach((p, i) => {
+            const row = document.createElement('div');
+            row.className = `rank-row rank-p${p.id}`;
+            
+            // 1등에게는 왕관 아이콘
+            const rankIcon = i === 0 ? "👑 " : "";
+            
+            // 보너스 내역이 있으면 작게 표시
+            const bonusHtml = p.bonusDesc ? `<div style="font-size:11px; color:#f1c40f; margin-top:3px;">└ ${p.bonusDesc}</div>` : "";
+
+            row.innerHTML = `
+                <span class="rank-num">${rankIcon}${i+1}</span>
+                <span style="flex:1; font-weight:bold;">Player ${p.id}</span>
+                <div style="text-align:right;">
+                    <span style="font-size:20px; font-weight:bold; color:#fff;">${p.score}점</span>
+                    <div style="font-size:12px; color:#aaa;">유물 ${p.artifacts.length}개</div>
+                    ${bonusHtml}
+                </div>
+            `;
+            container.appendChild(row);
+        });
+
+        document.getElementById('gameEndModal').style.display = 'flex';
+    }
+} 
+
+const game = new Game();
+
+// [최적화] 전역 툴팁 제어 로직 (requestAnimationFrame 적용)
+const tooltipEl = document.getElementById('global-tooltip');
+let isTooltipVisible = false;
+let rafId = null; // 애니메이션 프레임 ID
+
+document.addEventListener('mouseover', (e) => {
+    const target = e.target.closest('[data-tooltip]');
+    if (target) {
+        const text = target.getAttribute('data-tooltip');
+        if (text) {
+            tooltipEl.innerText = text;
+            tooltipEl.style.display = 'block';
+            isTooltipVisible = true;
+            // 초기 위치 잡기
+            updateTooltipPosition(e.clientX, e.clientY);
+        }
+    }
+});
+
+document.addEventListener('mousemove', (e) => {
+    if (!isTooltipVisible) return;
+
+    // 브라우저가 다음 화면을 그릴 준비가 되었을 때만 실행 (렉 방지 핵심)
+    if (rafId) return; 
+    
+    rafId = requestAnimationFrame(() => {
+        updateTooltipPosition(e.clientX, e.clientY);
+        rafId = null;
+    });
+});
+
+document.addEventListener('mouseout', (e) => {
+    const target = e.target.closest('[data-tooltip]');
+    if (target) {
+        tooltipEl.style.display = 'none';
+        isTooltipVisible = false;
+        if (rafId) {
+            cancelAnimationFrame(rafId);
+            rafId = null;
+        }
+    }
+});
+
+// 위치 계산 로직 분리
+function updateTooltipPosition(x, y) {
+    let left = x + 15;
+    let top = y + 15;
+
+    // 화면 밖으로 나가는 것 방지
+    if (left + 220 > window.innerWidth) left = x - 225;
+    if (top + 100 > window.innerHeight) top = y - 100;
+
+    // 하드웨어 가속 사용 (transform) -> 부드러움 향상
+    tooltipEl.style.left = left + 'px';
+    tooltipEl.style.top = top + 'px';
+}
+
+// [추가] 스크롤 시 툴팁 잔상 방지
+window.addEventListener('scroll', () => {
+    if (isTooltipVisible) {
+        tooltipEl.style.display = 'none'; // 스크롤 중엔 숨김
+        isTooltipVisible = false;
+    }
+}, { passive: true });
+</script>
+</body>
+</html>
